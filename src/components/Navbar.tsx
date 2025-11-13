@@ -1,0 +1,73 @@
+import { Link, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { GraduationCap, LogOut, User } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+export function Navbar() {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  return (
+    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
+          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+            <GraduationCap className="h-5 w-5 text-white" />
+          </div>
+          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Campify
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-4">
+          {user ? (
+            <>
+              <Button variant="ghost" asChild>
+                <Link to="/voice">The Voice</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link to="/hub">The Hub</Link>
+              </Button>
+              <Button variant="ghost" asChild>
+                <Link to="/market">The Market</Link>
+              </Button>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-gradient-primary text-white">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-popover">
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button asChild>
+              <Link to="/auth">Get Started</Link>
+            </Button>
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
