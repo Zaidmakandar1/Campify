@@ -1,11 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
-import { DataSeeder } from '@/components/DataSeeder';
 import { AIInsightsDashboard } from '@/components/AIInsightsDashboard';
-import { UserDebugInfo } from '@/components/UserDebugInfo';
-import { QuickTestUser } from '@/components/QuickTestUser';
-import { DebugUserPermissions } from '@/components/DebugUserPermissions';
-import { TestDatabasePermissions } from '@/components/TestDatabasePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Calendar, TrendingUp, Sparkles, Brain } from 'lucide-react';
@@ -154,18 +149,6 @@ export default function Home() {
         <div className="mt-12">
           <AIInsightsDashboard />
         </div>
-
-        {/* Debug Info - Only show for development */}
-        <UserDebugInfo />
-        <TestDatabasePermissions />
-        <QuickTestUser />
-
-        {/* Development Tools - Only show for development */}
-        {import.meta.env.DEV && (
-          <div className="mt-8 flex justify-center">
-            <DataSeeder />
-          </div>
-        )}
       </main>
     </div>
   );
