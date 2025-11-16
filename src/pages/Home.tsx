@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
+import { DataSeeder } from '@/components/DataSeeder';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Calendar, TrendingUp, Sparkles } from 'lucide-react';
@@ -113,12 +114,15 @@ export default function Home() {
                 <CardTitle>Club Dashboard</CardTitle>
                 <CardDescription>Quick actions for club management</CardDescription>
               </CardHeader>
-              <CardContent className="flex gap-4">
+              <CardContent className="flex flex-wrap gap-4">
                 <Button asChild>
+                  <Link to="/club/dashboard">Club Dashboard</Link>
+                </Button>
+                <Button asChild variant="outline">
                   <Link to="/hub/event/new">Create Event</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link to="/hub/venues">Book Venue</Link>
+                  <Link to="/club/venues">Book Venue</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -138,6 +142,13 @@ export default function Home() {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+        )}
+
+        {/* Development Tools - Only show for development */}
+        {import.meta.env.DEV && (
+          <div className="mt-8 flex justify-center">
+            <DataSeeder />
           </div>
         )}
       </main>

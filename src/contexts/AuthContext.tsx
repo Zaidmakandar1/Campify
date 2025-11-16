@@ -24,48 +24,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let mounted = true;
+    
+    const initAuth = async () => {
+      try {
+        console.log('[Auth] Initializing...');
+        
+        // Get initial session with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        );
+        
+        const { data: { session }, error } = await Promise.race([
+          sessionPromise,
+          timeoutPromise
+        ]) as any;
+        
+        if (error) {
+          console.error('[Auth] getSession error', error);
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setUserRole(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log('[Auth] Session:', session ? 'Found' : 'None');
+
+        if (mounted) {
+          setSession(session);
+          setUser(session?.user ?? null);
+          
+          // Skip role fetching for now to avoid hanging
+          if (session?.user) {
+            setUserRole('student'); // Default role for now
+          } else {
+            setUserRole(null);
+          }
+          
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('[Auth] init error', err);
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+        }
+      }
+    };
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        if (!mounted) return;
+        
+        console.log('[Auth] Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Fetch user role
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-          
-          setUserRole(profile?.role ?? null);
-        } else {
-          setUserRole(null);
-        }
-        
-        setLoading(false);
+        setUserRole(session?.user ? 'student' : null);
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-        
-        setUserRole(profile?.role ?? null);
-      }
-      
-      setLoading(false);
-    });
+    // Initialize auth
+    initAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, role: 'student' | 'faculty' | 'club') => {

@@ -5,12 +5,20 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Auth from "./pages/Auth";
 import Home from "./pages/Home";
 import Voice from "./pages/Voice";
 import VoiceNew from "./pages/VoiceNew";
 import VoiceDetail from "./pages/VoiceDetail";
+import AdminVoice from "./pages/AdminVoice";
 import Hub from "./pages/Hub";
+import EventDetail from "./pages/EventDetail";
+import EventNew from "./pages/EventNew";
+import ClubDashboard from "./pages/ClubDashboard";
+import ClubVenues from "./pages/ClubVenues";
+import VenueDetail from "./pages/VenueDetail";
 import Market from "./pages/Market";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -18,12 +26,13 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route
@@ -51,6 +60,14 @@ const App = () => (
               }
             />
             <Route
+              path="/voice/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminVoice />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/voice/:id"
               element={
                 <ProtectedRoute>
@@ -63,6 +80,46 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Hub />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hub/event/new"
+              element={
+                <ProtectedRoute>
+                  <EventNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/hub/event/:id"
+              element={
+                <ProtectedRoute>
+                  <EventDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/dashboard"
+              element={
+                <ProtectedRoute>
+                  <ClubDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/venues"
+              element={
+                <ProtectedRoute>
+                  <ClubVenues />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/venues/:id"
+              element={
+                <ProtectedRoute>
+                  <VenueDetail />
                 </ProtectedRoute>
               }
             />
@@ -84,10 +141,11 @@ const App = () => (
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

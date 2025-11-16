@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EventCard } from '@/components/EventCard';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, MapPin, Users, Plus } from 'lucide-react';
+import { MapPin, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -102,62 +101,13 @@ export default function Hub() {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {events.map((event) => (
-                  <Card key={event.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    {event.image_url && (
-                      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                        <Calendar className="h-16 w-16 text-primary" />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-lg">{event.title}</CardTitle>
-                        {event.is_completed ? (
-                          <Badge className="bg-green-500">Completed</Badge>
-                        ) : (
-                          <Badge>Upcoming</Badge>
-                        )}
-                      </div>
-                      {event.clubs && (
-                        <p className="text-sm text-muted-foreground">
-                          by {event.clubs.name}
-                        </p>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                        {event.description}
-                      </p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(event.start_date).toLocaleDateString()}
-                        </div>
-                        {event.venues && (
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            {event.venues.name}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                          <Users className="h-4 w-4" />
-                          {event.current_registrations} / {event.max_registrations} registered
-                        </div>
-                      </div>
-                    </CardContent>
-                    <CardFooter>
-                      <Button asChild className="w-full">
-                        <Link to={`/hub/event/${event.id}`}>
-                          View Details
-                        </Link>
-                      </Button>
-                    </CardFooter>
-                  </Card>
+                  <EventCard key={event.id} event={event} />
                 ))}
 
                 {events.length === 0 && (
-                  <Card className="col-span-full p-12 text-center">
+                  <div className="col-span-full text-center py-12">
                     <p className="text-muted-foreground">No events found</p>
-                  </Card>
+                  </div>
                 )}
               </div>
             )}

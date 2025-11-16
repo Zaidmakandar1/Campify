@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -30,6 +30,7 @@ interface Comment {
 
 export default function VoiceDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -38,6 +39,11 @@ export default function VoiceDetail() {
 
   useEffect(() => {
     if (id) {
+      // Defensive: don't treat reserved paths like "admin" or "new" as a feedback id
+      if (id === 'admin' || id === 'new') {
+        navigate('/voice');
+        return;
+      }
       fetchFeedback();
       fetchComments();
     }

@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { FeedbackCard } from '@/components/FeedbackCard';
 import { supabase } from '@/integrations/supabase/client';
-import { ThumbsUp, MessageSquare, Plus, Filter } from 'lucide-react';
+import { Plus, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -90,16 +89,7 @@ export default function Voice() {
     fetchFeedbacks();
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      facilities: 'bg-blue-500',
-      academics: 'bg-green-500',
-      events: 'bg-purple-500',
-      administration: 'bg-orange-500',
-      other: 'bg-gray-500',
-    };
-    return colors[category] || colors.other;
-  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -141,54 +131,17 @@ export default function Voice() {
         ) : (
           <div className="grid gap-4">
             {feedbacks.map((feedback) => (
-              <Card key={feedback.id} className="hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <Link to={`/voice/${feedback.id}`}>
-                        <h3 className="text-xl font-semibold hover:text-primary transition-colors">
-                          {feedback.title}
-                        </h3>
-                      </Link>
-                      <p className="text-muted-foreground mt-2 line-clamp-2">
-                        {feedback.content}
-                      </p>
-                    </div>
-                    {feedback.is_resolved && (
-                      <Badge className="ml-4 bg-green-500">Resolved</Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardFooter className="flex items-center gap-4">
-                  <Badge className={getCategoryColor(feedback.category)}>
-                    {feedback.category}
-                  </Badge>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleUpvote(feedback.id)}
-                    className="gap-1"
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                    {feedback.upvotes}
-                  </Button>
-                  <Button variant="ghost" size="sm" asChild className="gap-1">
-                    <Link to={`/voice/${feedback.id}`}>
-                      <MessageSquare className="h-4 w-4" />
-                      {feedback.feedback_comments?.[0]?.count || 0}
-                    </Link>
-                  </Button>
-                  <span className="text-sm text-muted-foreground ml-auto">
-                    {new Date(feedback.created_at).toLocaleDateString()}
-                  </span>
-                </CardFooter>
-              </Card>
+              <FeedbackCard
+                key={feedback.id}
+                feedback={feedback}
+                onUpvote={handleUpvote}
+              />
             ))}
 
             {feedbacks.length === 0 && (
-              <Card className="p-12 text-center">
+              <div className="text-center py-12">
                 <p className="text-muted-foreground">No feedback found. Be the first to share!</p>
-              </Card>
+              </div>
             )}
           </div>
         )}
