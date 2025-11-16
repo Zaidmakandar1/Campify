@@ -3,6 +3,7 @@ import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { FeedbackCard } from '@/components/FeedbackCard';
 import { supabase } from '@/integrations/supabase/client';
+import { aiAnalytics } from '@/lib/aiAnalytics';
 import { Plus, Filter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -63,30 +64,51 @@ export default function Voice() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: existingUpvote } = await supabase
-      .from('feedback_upvotes')
-      .select()
-      .eq('feedback_id', feedbackId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existingUpvote) {
-      await supabase.from('feedback_upvotes').delete().eq('id', existingUpvote.id);
-      toast.success('Upvote removed');
-    } else {
-      const { error } = await supabase
+    try {
+      const { data: existingUpvote } = await supabase
         .from('feedback_upvotes')
-        .insert({
-          feedback_id: feedbackId,
-          user_id: user.id
-        });
-      
-      if (!error) {
-        toast.success('Upvoted!');
-      }
-    }
+        .select()
+        .eq('feedback_id', feedbackId)
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-    fetchFeedbacks();
+      if (existingUpvote) {
+        // Remove upvote
+        await supabase.from('feedback_upvotes').delete().eq('id', existingUpvote.id);
+        
+        // Decrease upvote count
+        await supabase.rpc('decrement_upvotes', { feedback_id: feedbackId });
+        
+        toast.success('Upvote removed');
+      } else {
+        // Add upvote
+        const { error } = await supabase
+          .from('feedback_upvotes')
+          .insert({
+            feedback_id: feedbackId,
+            user_id: user.id
+          });
+        
+        if (!error) {
+          // Increase upvote count
+          await supabase.rpc('increment_upvotes', { feedback_id: feedbackId });
+          toast.success('Upvoted!');
+        }
+      }
+
+      // Track activity
+      await aiAnalytics.trackActivity({
+        user_id: user.id,
+        activity_type: existingUpvote ? 'upvote_remove' : 'upvote_add',
+        target_type: 'feedback',
+        target_id: feedbackId
+      });
+
+      fetchFeedbacks();
+    } catch (error) {
+      console.error('Error handling upvote:', error);
+      toast.error('Failed to update upvote');
+    }
   };
 
 

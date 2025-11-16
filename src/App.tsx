@@ -18,6 +18,7 @@ import EventDetail from "./pages/EventDetail";
 import EventNew from "./pages/EventNew";
 import ClubDashboard from "./pages/ClubDashboard";
 import ClubVenues from "./pages/ClubVenues";
+import PublicVenues from "./pages/PublicVenues";
 import VenueDetail from "./pages/VenueDetail";
 import Market from "./pages/Market";
 import Profile from "./pages/Profile";
@@ -84,9 +85,9 @@ const App = () => (
               }
             />
             <Route
-              path="/hub/event/new"
+              path="/club/events/new"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['club']}>
                   <EventNew />
                 </ProtectedRoute>
               }
@@ -108,9 +109,17 @@ const App = () => (
               }
             />
             <Route
-              path="/club/venues"
+              path="/venues"
               element={
                 <ProtectedRoute>
+                  <PublicVenues />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/venues"
+              element={
+                <ProtectedRoute allowedRoles={['club']}>
                   <ClubVenues />
                 </ProtectedRoute>
               }
@@ -118,7 +127,7 @@ const App = () => (
             <Route
               path="/club/venues/:id"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['club']}>
                   <VenueDetail />
                 </ProtectedRoute>
               }

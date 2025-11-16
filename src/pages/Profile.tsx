@@ -79,7 +79,11 @@ export default function Profile() {
               <div className="text-center">
                 <h2 className="text-xl font-bold">{profile?.full_name}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
-                <Badge className="mt-2 capitalize">{userRole}</Badge>
+                <Badge className="mt-2 capitalize">
+                  {userRole === 'club' ? 'Club Representative' : 
+                   userRole === 'faculty' ? 'Faculty/Admin' : 
+                   'Student'}
+                </Badge>
               </div>
               <div className="pt-4 border-t space-y-2">
                 <div className="flex justify-between text-sm">

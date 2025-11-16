@@ -106,7 +106,7 @@ export default function EventNew() {
         club_id: club.id,
         title,
         description,
-        venue_id: venueId === 'no-venue' ? null : venueId,
+        venue_id: venueId === 'none' ? null : venueId,
         start_date: startDateTime.toISOString(),
         max_registrations: maxRegistrations,
         current_registrations: 0,
@@ -118,7 +118,7 @@ export default function EventNew() {
       console.error(error);
     } else {
       toast.success('Event created successfully!');
-      navigate('/hub');
+      navigate('/club/dashboard');
     }
 
     setIsLoading(false);
@@ -215,12 +215,12 @@ export default function EventNew() {
 
               <div className="space-y-2">
                 <Label htmlFor="venue_id">Venue (Optional)</Label>
-                <Select name="venue_id" defaultValue="no-venue">
+                <Select name="venue_id">
                   <SelectTrigger id="venue_id">
                     <SelectValue placeholder="Select a venue" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover">
-                    <SelectItem value="no-venue">No venue selected</SelectItem>
+                    <SelectItem value="none">No venue selected</SelectItem>
                     {venues.map((venue) => (
                       <SelectItem key={venue.id} value={venue.id}>
                         {venue.name}
@@ -268,7 +268,7 @@ export default function EventNew() {
                 type="button"
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate('/hub')}
+                onClick={() => navigate('/club/dashboard')}
               >
                 Cancel
               </Button>

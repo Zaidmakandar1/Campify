@@ -13,7 +13,7 @@ interface Event {
   id: string;
   title: string;
   description: string;
-  image_url: string;
+  image_url: string | null;
   start_date: string;
   max_registrations: number;
   current_registrations: number;
@@ -69,22 +69,29 @@ export default function Hub() {
               Discover events and manage club activities
             </p>
           </div>
-          {userRole === 'club' && (
-            <div className="flex gap-4">
-              <Button asChild variant="outline">
-                <Link to="/hub/venues">
-                  <MapPin className="h-4 w-4 mr-2" />
-                  Book Venue
-                </Link>
-              </Button>
+          <div className="flex gap-4">
+            <Button asChild variant="outline">
+              <Link to="/venues">
+                <MapPin className="h-4 w-4 mr-2" />
+                Browse Venues
+              </Link>
+            </Button>
+            
+            {userRole === 'club' && (
               <Button asChild>
-                <Link to="/hub/event/new">
+                <Link to="/club/events/new">
                   <Plus className="h-4 w-4 mr-2" />
                   Create Event
                 </Link>
               </Button>
-            </div>
-          )}
+            )}
+            
+            {userRole === 'student' && (
+              <div className="text-sm text-muted-foreground flex items-center">
+                💡 Want to host events? Join a club first!
+              </div>
+            )}
+          </div>
         </div>
 
         <Tabs value={filter} onValueChange={setFilter} className="mb-8">

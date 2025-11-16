@@ -21,6 +21,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<'student' | 'faculty' | 'club' | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Emergency timeout to prevent infinite loading
+  useEffect(() => {
+    const emergencyTimeout = setTimeout(() => {
+      console.warn('[Auth] Emergency timeout - forcing load complete');
+      setLoading(false);
+      if (!user) {
+        setUserRole(null);
+      }
+    }, 5000); // 5 second emergency timeout
+
+    return () => clearTimeout(emergencyTimeout);
+  }, [user]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,39 +41,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     const initAuth = async () => {
       try {
-        console.log('[Auth] Initializing...');
+        console.log('[Auth] Starting simple init...');
         
-        // Get initial session with timeout
+        // Simple session check with timeout
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session timeout')), 5000)
+        const timeoutPromise = new Promise((resolve) => 
+          setTimeout(() => resolve({ data: { session: null }, error: null }), 3000)
         );
         
-        const { data: { session }, error } = await Promise.race([
-          sessionPromise,
-          timeoutPromise
-        ]) as any;
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        const { data: { session }, error } = result;
         
-        if (error) {
-          console.error('[Auth] getSession error', error);
-          if (mounted) {
-            setSession(null);
-            setUser(null);
-            setUserRole(null);
-            setLoading(false);
-          }
-          return;
-        }
-
-        console.log('[Auth] Session:', session ? 'Found' : 'None');
-
         if (mounted) {
+          console.log('[Auth] Session result:', session ? 'Found' : 'None');
           setSession(session);
           setUser(session?.user ?? null);
           
-          // Skip role fetching for now to avoid hanging
+          // Simple role assignment - no complex database queries
           if (session?.user) {
-            setUserRole('student'); // Default role for now
+            const userMetadata = session.user.user_metadata || {};
+            const role = userMetadata.role || 'student';
+            console.log('[Auth] Setting role to:', role);
+            setUserRole(role);
+            
+            // Check for pending club data and create club if needed
+            if (role === 'club') {
+              const pendingClubData = localStorage.getItem('pendingClubData');
+              if (pendingClubData) {
+                try {
+                  const clubData = JSON.parse(pendingClubData);
+                  console.log('[Auth] Creating club with pending data:', clubData);
+                  
+                  // Create club profile
+                  supabase
+                    .from('clubs')
+                    .insert({
+                      profile_id: session.user.id,
+                      name: clubData.name,
+                      description: clubData.description,
+                      performance_score: 50
+                    })
+                    .then(({ error }) => {
+                      if (error) {
+                        console.error('Club creation error:', error);
+                      } else {
+                        console.log('Club created successfully');
+                        localStorage.removeItem('pendingClubData');
+                      }
+                    });
+                } catch (error) {
+                  console.error('Error parsing pending club data:', error);
+                  localStorage.removeItem('pendingClubData');
+                }
+              }
+            }
           } else {
             setUserRole(null);
           }
@@ -68,17 +102,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         }
       } catch (err) {
-        console.error('[Auth] init error', err);
+        console.error('[Auth] Simple init error:', err);
         if (mounted) {
           setSession(null);
           setUser(null);
-          setUserRole(null);
+          setUserRole('student'); // Default fallback
           setLoading(false);
         }
       }
     };
 
-    // Set up auth state listener
+    // Simple auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (!mounted) return;
@@ -86,12 +120,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('[Auth] Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
-        setUserRole(session?.user ? 'student' : null);
+        
+        if (session?.user) {
+          const userMetadata = session.user.user_metadata || {};
+          setUserRole(userMetadata.role || 'student');
+        } else {
+          setUserRole(null);
+        }
       }
     );
 
-    // Initialize auth
-    initAuth();
+    // Initialize with timeout
+    setTimeout(initAuth, 100);
 
     return () => {
       mounted = false;
@@ -102,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, fullName: string, role: 'student' | 'faculty' | 'club') => {
     const redirectUrl = `${window.location.origin}/`;
     
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -115,12 +155,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes('User already registered')) {
+        toast.error('This email is already registered. Please sign in instead.');
+      } else {
+        toast.error(error.message);
+      }
       throw error;
     }
 
-    toast.success('Account created successfully!');
-    navigate('/');
+    if (data.user && !data.user.email_confirmed_at) {
+      toast.success('Account created! Please check your email for confirmation link.');
+    } else {
+      toast.success('Account created successfully!');
+      navigate('/');
+    }
   };
 
   const signIn = async (email: string, password: string) => {
@@ -130,7 +178,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (error) {
-      toast.error(error.message);
+      if (error.message.includes('Email not confirmed')) {
+        toast.error('Please check your email and click the confirmation link, or contact admin to disable email confirmation for development.');
+      } else {
+        toast.error(error.message);
+      }
       throw error;
     }
 

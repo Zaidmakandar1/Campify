@@ -2,7 +2,15 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const seedSampleData = async () => {
   try {
-    // Sample venues
+    console.log('Starting data seeding...');
+
+    // Check if user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      throw new Error('User must be authenticated to seed data');
+    }
+
+    // Sample venues (these don't require special permissions)
     const venues = [
       {
         name: 'Main Auditorium',
@@ -30,17 +38,22 @@ export const seedSampleData = async () => {
       }
     ];
 
+    console.log('Seeding venues...');
     const { error: venuesError } = await supabase
       .from('venues')
-      .upsert(venues, { onConflict: 'name' });
+      .insert(venues);
 
     if (venuesError) {
       console.error('Error seeding venues:', venuesError);
+      // Don't fail completely if venues already exist
+      if (!venuesError.message.includes('duplicate key')) {
+        throw venuesError;
+      }
     } else {
       console.log('Venues seeded successfully');
     }
 
-    // Sample feedback
+    // Sample feedback (these will be created by the current user)
     const feedback = [
       {
         title: 'Need more water fountains in the library',
@@ -75,14 +88,58 @@ export const seedSampleData = async () => {
       }
     ];
 
+    console.log('Seeding feedback...');
     const { error: feedbackError } = await supabase
       .from('feedback')
-      .upsert(feedback, { onConflict: 'title' });
+      .insert(feedback);
 
     if (feedbackError) {
       console.error('Error seeding feedback:', feedbackError);
+      // Don't fail completely if feedback already exists
+      if (!feedbackError.message.includes('duplicate key')) {
+        throw feedbackError;
+      }
     } else {
       console.log('Feedback seeded successfully');
+    }
+
+    // Sample clubs data
+    const clubs = [
+      {
+        name: 'Computer Science Club',
+        description: 'A community for CS students to learn, collaborate, and build amazing projects together.',
+        performance_score: 85
+      },
+      {
+        name: 'Drama Society',
+        description: 'Bringing stories to life through theater, acting workshops, and creative performances.',
+        performance_score: 92
+      },
+      {
+        name: 'Environmental Club',
+        description: 'Working towards a sustainable future through campus initiatives and awareness campaigns.',
+        performance_score: 78
+      },
+      {
+        name: 'Photography Club',
+        description: 'Capturing moments and developing skills in digital and film photography.',
+        performance_score: 88
+      }
+    ];
+
+    console.log('Seeding clubs...');
+    const { error: clubsError } = await supabase
+      .from('clubs')
+      .insert(clubs);
+
+    if (clubsError) {
+      console.error('Error seeding clubs:', clubsError);
+      // Don't fail completely if clubs already exist
+      if (!clubsError.message.includes('duplicate key')) {
+        throw clubsError;
+      }
+    } else {
+      console.log('Clubs seeded successfully');
     }
 
     return { success: true };

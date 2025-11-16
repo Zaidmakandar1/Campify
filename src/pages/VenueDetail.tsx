@@ -28,7 +28,7 @@ interface Booking {
 
 export default function VenueDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const [venue, setVenue] = useState<Venue | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -77,19 +77,44 @@ export default function VenueDetail() {
   const handleBooking = async () => {
     if (!selectedDate || !selectedTime || !user) return;
 
+    console.log('Booking attempt by user:', {
+      userId: user.id,
+      email: user.email,
+      userRole: userRole
+    });
+
     setBooking(true);
 
-    // Get user's club
-    const { data: club } = await supabase
+    // Get user's club or create one if it doesn't exist
+    let { data: club } = await supabase
       .from('clubs')
       .select('id')
       .eq('profile_id', user.id)
-      .single();
+      .maybeSingle();
 
     if (!club) {
-      toast.error('You need to be a club representative to book venues');
-      setBooking(false);
-      return;
+      console.log('No club found, creating one for user:', user.id);
+      // Auto-create club for the user
+      const { data: newClub, error: createError } = await supabase
+        .from('clubs')
+        .insert({
+          profile_id: user.id,
+          name: `${user.email?.split('@')[0] || 'User'}'s Club`,
+          description: 'Club profile created for venue booking',
+          performance_score: 50
+        })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Failed to create club:', createError);
+        toast.error('Failed to create club profile. Please contact admin.');
+        setBooking(false);
+        return;
+      }
+      
+      club = newClub;
+      toast.success('Club profile created! Proceeding with booking...');
     }
 
     const startTime = new Date(selectedDate);

@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { SignupForm } from '@/components/SignupForm';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GraduationCap } from 'lucide-react';
 import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,8 +34,24 @@ export default function Auth() {
     const fullName = formData.get('fullName') as string;
     const role = formData.get('role') as 'student' | 'faculty' | 'club';
 
+    // Club-specific data
+    const clubName = formData.get('clubName') as string;
+    const clubDescription = formData.get('clubDescription') as string;
+    const clubCategory = formData.get('clubCategory') as string;
+
     try {
+      // Create user account first
       await signUp(email, password, fullName, role);
+
+      // If it's a club representative, create the club profile immediately
+      if (role === 'club' && clubName && clubDescription) {
+        // Store club data in localStorage temporarily
+        localStorage.setItem('pendingClubData', JSON.stringify({
+          name: clubName,
+          description: clubDescription,
+          category: clubCategory
+        }));
+      }
     } catch (error) {
       console.error('Sign up error:', error);
     } finally {
@@ -113,62 +131,7 @@ export default function Auth() {
           </TabsContent>
 
           <TabsContent value="signup">
-            <form onSubmit={handleSignUp}>
-              <CardContent className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name">Full Name</Label>
-                  <Input
-                    id="signup-name"
-                    name="fullName"
-                    type="text"
-                    placeholder="John Doe"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    name="email"
-                    type="email"
-                    placeholder="your.email@university.edu"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    name="password"
-                    type="password"
-                    required
-                    minLength={6}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="role">I am a...</Label>
-                  <Select name="role" required defaultValue="student">
-                    <SelectTrigger id="role">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-popover">
-                      <SelectItem value="student">Student</SelectItem>
-                      <SelectItem value="faculty">Faculty/Admin</SelectItem>
-                      <SelectItem value="club">Club Representative</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Creating account...' : 'Create Account'}
-                </Button>
-              </CardFooter>
-            </form>
+            <SignupForm isLoading={isLoading} onSubmit={handleSignUp} />
           </TabsContent>
         </Tabs>
       </Card>

@@ -1,9 +1,14 @@
 import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { DataSeeder } from '@/components/DataSeeder';
+import { AIInsightsDashboard } from '@/components/AIInsightsDashboard';
+import { UserDebugInfo } from '@/components/UserDebugInfo';
+import { QuickTestUser } from '@/components/QuickTestUser';
+import { DebugUserPermissions } from '@/components/DebugUserPermissions';
+import { TestDatabasePermissions } from '@/components/TestDatabasePermissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Calendar, TrendingUp, Sparkles } from 'lucide-react';
+import { MessageSquare, Calendar, TrendingUp, Sparkles, Brain } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function Home() {
@@ -67,16 +72,16 @@ export default function Home() {
           <Card className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary">
             <CardHeader>
               <div className="h-12 w-12 rounded-lg bg-gradient-hero flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <TrendingUp className="h-6 w-6 text-white" />
+                <Brain className="h-6 w-6 text-white" />
               </div>
               <CardTitle>The Market</CardTitle>
               <CardDescription>
-                Track club performance and gamified rankings
+                AI-powered club analysis and real-time rankings
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild className="w-full" variant="outline">
-                <Link to="/market">See Rankings</Link>
+                <Link to="/market">See AI Rankings</Link>
               </Button>
             </CardContent>
           </Card>
@@ -111,7 +116,7 @@ export default function Home() {
           <div className="mt-8">
             <Card className="border-accent">
               <CardHeader>
-                <CardTitle>Club Dashboard</CardTitle>
+                <CardTitle>Club Representative Dashboard</CardTitle>
                 <CardDescription>Quick actions for club management</CardDescription>
               </CardHeader>
               <CardContent className="flex flex-wrap gap-4">
@@ -119,7 +124,7 @@ export default function Home() {
                   <Link to="/club/dashboard">Club Dashboard</Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link to="/hub/event/new">Create Event</Link>
+                  <Link to="/club/events/new">Create Event</Link>
                 </Button>
                 <Button asChild variant="outline">
                   <Link to="/club/venues">Book Venue</Link>
@@ -144,6 +149,16 @@ export default function Home() {
             </Card>
           </div>
         )}
+
+        {/* AI Insights Dashboard */}
+        <div className="mt-12">
+          <AIInsightsDashboard />
+        </div>
+
+        {/* Debug Info - Only show for development */}
+        <UserDebugInfo />
+        <TestDatabasePermissions />
+        <QuickTestUser />
 
         {/* Development Tools - Only show for development */}
         {import.meta.env.DEV && (

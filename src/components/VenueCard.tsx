@@ -63,11 +63,17 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
       </CardContent>
       
       <div className="p-6 pt-0">
-        <Button asChild className="w-full">
-          <Link to={linkTo || `/club/venues/${venue.id}`}>
-            View Details & Book
-          </Link>
-        </Button>
+        {linkTo ? (
+          <Button asChild className="w-full">
+            <Link to={linkTo}>
+              View Details & Book
+            </Link>
+          </Button>
+        ) : (
+          <Button disabled className="w-full">
+            View Only (Club Access Required)
+          </Button>
+        )}
       </div>
     </Card>
   );
