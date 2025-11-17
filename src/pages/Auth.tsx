@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { GraduationCap } from 'lucide-react';
+import { CampifyLogo } from '@/components/CampifyLogo';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -80,8 +80,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2 text-center">
-          <div className="mx-auto h-12 w-12 rounded-xl bg-gradient-primary flex items-center justify-center mb-2">
-            <GraduationCap className="h-7 w-7 text-white" />
+          <div className="mx-auto mb-2">
+            <CampifyLogo className="h-20 w-20 mx-auto" />
           </div>
           <CardTitle className="text-2xl">Welcome to Campify</CardTitle>
           <CardDescription>
@@ -90,10 +90,12 @@ export default function Auth() {
         </CardHeader>
 
         <Tabs defaultValue="signin" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mx-6">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
+          <div className="px-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="signin">
             <form onSubmit={handleSignIn}>

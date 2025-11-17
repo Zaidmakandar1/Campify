@@ -37,20 +37,8 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
-        {venue.image_url ? (
-          <img 
-            src={venue.image_url} 
-            alt={venue.name}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              // Fallback to icon if image fails to load
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        ) : (
-          <MapPin className="h-16 w-16 text-primary" />
-        )}
+      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
+        <MapPin className="h-16 w-16 text-primary" />
       </div>
       
       <CardHeader className="flex-1">
@@ -62,7 +50,7 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
       
       <CardContent className="space-y-4 flex-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
+          <Users className="h-4 w-4 text-primary" />
           <span>Capacity: {venue.capacity} people</span>
         </div>
         
@@ -81,15 +69,8 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
         )}
       </CardContent>
       
-      <div className="p-6 pt-0 space-y-2">
-        {canEdit ? (
-          <Button asChild className="w-full">
-            <Link to={`/venues/${venue.id}/edit`}>
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Venue
-            </Link>
-          </Button>
-        ) : linkTo ? (
+      <div className="p-6 pt-0">
+        {linkTo ? (
           <Button asChild className="w-full">
             <Link to={linkTo}>
               View Details & Book
