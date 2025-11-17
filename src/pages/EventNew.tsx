@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { CampifyLogo } from '@/components/CampifyLogo';
 
 interface Venue {
   id: string;
@@ -19,6 +20,7 @@ interface Venue {
 
 export default function EventNew() {
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [allVenues, setAllVenues] = useState<Venue[]>([]); // Store all booked venues
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [club, setClub] = useState<any>(null);
@@ -40,20 +42,33 @@ export default function EventNew() {
     }
   }, [user]);
 
+  // Filter venues based on selected date and time
+  useEffect(() => {
+    if (club && startDate && startTime && endTime) {
+      filterVenuesByDateTime();
+    } else {
+      setVenues(allVenues); // Show all booked venues if date/time not selected
+    }
+  }, [startDate, startTime, endTime, allVenues, club]);
+
   const fetchClubAndVenues = async () => {
     try {
       console.log('Fetching club and venues for user:', user?.id);
       
-      // Fetch user's club
-      const { data: clubData, error: clubError } = await supabase
+      // Fetch user's club (take the first one if multiple exist)
+      const { data: clubsData, error: clubError } = await supabase
         .from('clubs')
         .select('*')
         .eq('profile_id', user?.id)
-        .maybeSingle();
+        .limit(1);
+
+      let clubData = null;
+      if (clubsData && clubsData.length > 0) {
+        clubData = clubsData[0];
+      }
 
       if (clubError) {
         console.error('Club fetch error:', clubError);
-        // Don't navigate away - allow user to create club from here
         console.log('No club found, will show create club form');
         setClub(null);
       } else if (!clubData) {
@@ -64,24 +79,73 @@ export default function EventNew() {
         setClub(clubData);
       }
 
-      // Fetch venues
-      try {
-        const { data: venuesData, error: venuesError } = await supabase
-          .from('venues')
-          .select('id, name')
-          .order('name');
+      // Fetch venues that the club has booked
+      if (clubData) {
+        try {
+          console.log('Fetching venue bookings for club:', clubData.id);
+          
+          // First, get all bookings for this club
+          const { data: bookingsData, error: bookingsError } = await supabase
+            .from('venue_bookings')
+            .select('venue_id, status')
+            .eq('club_id', clubData.id);
 
-        if (venuesError) {
-          console.error('Venues error:', venuesError);
-          toast.error('Failed to load venues');
-        } else {
-          console.log('Venues loaded:', venuesData?.length);
-          setVenues(venuesData || []);
+          console.log('All bookings for club:', bookingsData);
+
+          if (bookingsError) {
+            console.error('Bookings error:', bookingsError);
+            toast.error('Failed to load booked venues');
+            setVenues([]);
+            return;
+          }
+
+          if (!bookingsData || bookingsData.length === 0) {
+            console.log('No venue bookings found for this club');
+            toast.info('No venue bookings found. Please book a venue first.');
+            setVenues([]);
+            return;
+          }
+
+          // Get unique venue IDs from confirmed bookings
+          const confirmedVenueIds = [...new Set(
+            bookingsData
+              .filter(b => b.status === 'confirmed')
+              .map(b => b.venue_id)
+          )];
+
+          console.log('Confirmed venue IDs:', confirmedVenueIds);
+
+          if (confirmedVenueIds.length === 0) {
+            console.log('No confirmed bookings found');
+            toast.info('No confirmed venue bookings. Please wait for approval or book a venue.');
+            setVenues([]);
+            return;
+          }
+
+          // Fetch venue details
+          const { data: venuesData, error: venuesError } = await supabase
+            .from('venues')
+            .select('id, name')
+            .in('id', confirmedVenueIds)
+            .order('name');
+
+          console.log('Venues data:', venuesData);
+
+          if (venuesError) {
+            console.error('Venues error:', venuesError);
+            toast.error('Failed to load venue details');
+            setAllVenues([]);
+            setVenues([]);
+          } else {
+            console.log('Booked venues loaded:', venuesData?.length);
+            setAllVenues(venuesData || []);
+            setVenues(venuesData || []);
+          }
+        } catch (err) {
+          console.error('Venues fetch error:', err);
+          toast.error('Error loading venues');
+          setVenues([]);
         }
-      } catch (err) {
-        console.error('Venues fetch error:', err);
-        toast.error('Error loading venues');
-        setVenues([]);
       }
       
     } catch (error) {
@@ -90,22 +154,81 @@ export default function EventNew() {
     }
   };
 
-  const checkVenueAvailability = async (venueIdToCheck: string, dateStr: string, startTimeStr: string, endTimeStr: string): Promise<boolean> => {
-    if (venueIdToCheck === 'no-venue') return true; // No venue selected, no conflict possible
+  const filterVenuesByDateTime = async () => {
+    if (!club || !startDate || !startTime || !endTime) {
+      console.log('Cannot filter venues - missing data:', { club: !!club, startDate, startTime, endTime });
+      return;
+    }
 
     try {
-      const [startHours, startMins] = startTimeStr.split(':').map(Number);
-      const [endHours, endMins] = endTimeStr.split(':').map(Number);
+      const eventStart = new Date(`${startDate}T${startTime}`);
+      const eventEnd = new Date(`${startDate}T${endTime}`);
 
+      console.log('=== FILTERING VENUES ===');
+      console.log('Club ID:', club.id);
+      console.log('Event time:', eventStart.toISOString(), 'to', eventEnd.toISOString());
+      console.log('All booked venues:', allVenues);
+
+      // Get bookings for this club that overlap with the selected time
+      const { data: bookings, error } = await supabase
+        .from('venue_bookings')
+        .select('venue_id, venues(id, name)')
+        .eq('club_id', club.id)
+        .eq('status', 'confirmed')
+        .lte('start_time', eventEnd.toISOString())
+        .gte('end_time', eventStart.toISOString());
+
+      console.log('Bookings query result:', { bookings, error });
+
+      if (error) {
+        console.error('Error filtering venues:', error);
+        setVenues(allVenues); // Fallback to all venues
+        return;
+      }
+
+      if (!bookings || bookings.length === 0) {
+        console.log('❌ No venues booked for this time slot');
+        setVenues([]);
+        setVenueId('no-venue');
+        toast.info('No venues booked for this time slot');
+        return;
+      }
+
+      // Extract unique venues
+      const availableVenues = bookings
+        .map(b => b.venues)
+        .filter((venue, index, self) => 
+          venue && self.findIndex(v => v?.id === venue.id) === index
+        ) as Venue[];
+
+      console.log('✅ Venues available for selected time:', availableVenues);
+      setVenues(availableVenues);
+
+      // Reset venue selection if current selection is not available
+      if (venueId !== 'no-venue' && !availableVenues.find(v => v.id === venueId)) {
+        setVenueId('no-venue');
+      }
+    } catch (error) {
+      console.error('Error filtering venues:', error);
+      setVenues(allVenues);
+    }
+  };
+
+  const checkVenueAvailability = async (venueIdToCheck: string, dateStr: string, startTimeStr: string, endTimeStr: string): Promise<boolean> => {
+    if (venueIdToCheck === 'no-venue' || !club) return true; // No venue selected or no club
+
+    try {
       const eventStart = new Date(`${dateStr}T${startTimeStr}`);
       const eventEnd = new Date(`${dateStr}T${endTimeStr}`);
 
-      // Fetch all confirmed bookings for this venue on this date
+      // Fetch all confirmed bookings for this venue that overlap with the event time
+      // BUT exclude bookings made by the current club (they can use their own bookings)
       const { data: bookings, error } = await supabase
         .from('venue_bookings')
         .select('*')
         .eq('venue_id', venueIdToCheck)
         .eq('status', 'confirmed')
+        .neq('club_id', club.id) // Exclude this club's bookings
         .lte('start_time', eventEnd.toISOString())
         .gte('end_time', eventStart.toISOString());
 
@@ -115,10 +238,10 @@ export default function EventNew() {
       }
 
       if (bookings && bookings.length > 0) {
-        return false; // Venue is booked during this time
+        return false; // Venue is booked by another club during this time
       }
 
-      return true; // Venue is available
+      return true; // Venue is available (or booked by your club)
     } catch (error) {
       console.error('Venue availability check error:', error);
       return true; // Allow booking if check fails
@@ -245,10 +368,13 @@ export default function EventNew() {
         }
       }
 
-      const formData = new FormData(e.currentTarget);
+      const form = e.target as HTMLFormElement;
+      const formData = new FormData(form);
       const title = formData.get('title') as string;
       const description = formData.get('description') as string;
       const maxRegistrations = parseInt(formData.get('max_registrations') as string);
+      const totalPeople = parseInt(formData.get('total_people') as string);
+      const groupSize = parseInt(formData.get('group_size') as string);
 
       // Combine date and time for start and end
       const startDateTime = new Date(`${startDate}T${startTime}`);
@@ -265,6 +391,8 @@ export default function EventNew() {
           start_date: startDateTime.toISOString(),
           end_date: endDateTime.toISOString(),
           max_registrations: maxRegistrations,
+          total_people: totalPeople,
+          group_size: groupSize,
           current_registrations: 0,
           is_completed: false
         }]);
@@ -289,8 +417,31 @@ export default function EventNew() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-4" />
+          <div className="animate-pulse mb-4">
+            <CampifyLogo className="h-16 w-16" />
+          </div>
           <p className="text-muted-foreground">Loading event creation...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!club) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <Card className="border-yellow-200 bg-yellow-50">
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-semibold text-yellow-900 mb-2">No Club Found</h3>
+              <p className="text-yellow-800 mb-4">
+                You need to create a club before you can create events.
+              </p>
+              <Button onClick={() => navigate('/club/dashboard')}>
+                Go to Club Dashboard
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -415,6 +566,34 @@ export default function EventNew() {
                   min="1"
                   max="1000"
                 />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_people">Total People</Label>
+                  <Input
+                    id="total_people"
+                    name="total_people"
+                    type="number"
+                    placeholder="50"
+                    required
+                    min="1"
+                    max="10000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="group_size">People Per Group</Label>
+                  <Input
+                    id="group_size"
+                    name="group_size"
+                    type="number"
+                    placeholder="5"
+                    required
+                    min="1"
+                    max="100"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

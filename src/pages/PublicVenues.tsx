@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { VenueCard } from '@/components/VenueCard';
@@ -22,6 +22,7 @@ export default function PublicVenues() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const { userRole, user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log('[PublicVenues] Loaded - userRole:', userRole, 'user:', user?.email);
@@ -130,6 +131,7 @@ export default function PublicVenues() {
                   venue={venue}
                   canEdit={userRole === 'faculty'}
                   linkTo={linkToValue}
+                  onEdit={(venueId) => navigate(`/venues/${venueId}/edit`)}
                 />
               );
             })}

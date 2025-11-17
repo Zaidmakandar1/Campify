@@ -77,7 +77,7 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
         )}
       </CardContent>
       
-      <div className="p-6 pt-0">
+      <div className="p-6 pt-0 space-y-2">
         {linkTo ? (
           <Button asChild className="w-full">
             <Link to={linkTo}>
@@ -87,6 +87,17 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
         ) : (
           <Button disabled className="w-full">
             View Only (Club Access Required)
+          </Button>
+        )}
+        
+        {canEdit && (
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => onEdit?.(venue.id)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Venue
           </Button>
         )}
       </div>

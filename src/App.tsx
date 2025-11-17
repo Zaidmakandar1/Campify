@@ -17,6 +17,7 @@ import Hub from "./pages/Hub";
 import EventDetail from "./pages/EventDetail";
 import EventNew from "./pages/EventNew";
 import EventEdit from "./pages/EventEdit";
+import EventRegistrations from "./pages/EventRegistrations";
 import ClubDashboard from "./pages/ClubDashboard";
 import ClubVenues from "./pages/ClubVenues";
 import PublicVenues from "./pages/PublicVenues";
@@ -100,6 +101,14 @@ const App = () => (
               element={
                 <ProtectedRoute allowedRoles={['club']}>
                   <EventEdit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/events/:id/registrations"
+              element={
+                <ProtectedRoute allowedRoles={['club']}>
+                  <EventRegistrations />
                 </ProtectedRoute>
               }
             />

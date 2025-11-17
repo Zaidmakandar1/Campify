@@ -24,7 +24,10 @@ interface Event {
   image_url: string | null;
   venue_id: string | null;
   start_date: string;
+  end_date: string | null;
   max_registrations: number;
+  total_people: number | null;
+  group_size: number | null;
   club_id: string;
 }
 
@@ -51,13 +54,15 @@ export default function EventEdit() {
     venue_id: 'no-venue',
     start_date: '',
     start_time: '',
+    end_time: '',
     max_registrations: 100,
+    total_people: 0,
+    group_size: 1,
   });
 
   useEffect(() => {
     if (id && user) {
       fetchEvent();
-      fetchVenues();
     }
   }, [id, user]);
 
@@ -85,18 +90,30 @@ export default function EventEdit() {
 
       setEvent(data);
 
+      // Fetch venues for this club
+      fetchVenues(data.club_id);
+
       // Parse datetime
-      const eventDate = new Date(data.start_date);
-      const dateString = eventDate.toISOString().split('T')[0];
-      const timeString = eventDate.toTimeString().slice(0, 5);
+      const eventStartDate = new Date(data.start_date);
+      const dateString = eventStartDate.toISOString().split('T')[0];
+      const startTimeString = eventStartDate.toTimeString().slice(0, 5);
+      
+      let endTimeString = '';
+      if (data.end_date) {
+        const eventEndDate = new Date(data.end_date);
+        endTimeString = eventEndDate.toTimeString().slice(0, 5);
+      }
 
       setFormData({
         title: data.title,
         description: data.description,
         venue_id: data.venue_id || 'no-venue',
         start_date: dateString,
-        start_time: timeString,
+        start_time: startTimeString,
+        end_time: endTimeString,
         max_registrations: data.max_registrations,
+        total_people: data.total_people || 0,
+        group_size: data.group_size || 1,
       });
 
       // Set image preview from existing image
@@ -112,20 +129,63 @@ export default function EventEdit() {
     }
   };
 
-  const fetchVenues = async () => {
+  const fetchVenues = async (clubId: string) => {
     try {
-      const { data, error } = await supabase
+      console.log('Fetching venue bookings for club:', clubId);
+      
+      // First, get all bookings for this club
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('venue_bookings')
+        .select('venue_id, status')
+        .eq('club_id', clubId);
+
+      console.log('All bookings for club:', bookingsData);
+
+      if (bookingsError) {
+        console.error('Bookings error:', bookingsError);
+        setVenues([]);
+        return;
+      }
+
+      if (!bookingsData || bookingsData.length === 0) {
+        console.log('No venue bookings found for this club');
+        setVenues([]);
+        return;
+      }
+
+      // Get unique venue IDs from confirmed bookings
+      const confirmedVenueIds = [...new Set(
+        bookingsData
+          .filter(b => b.status === 'confirmed')
+          .map(b => b.venue_id)
+      )];
+
+      console.log('Confirmed venue IDs:', confirmedVenueIds);
+
+      if (confirmedVenueIds.length === 0) {
+        console.log('No confirmed bookings found');
+        setVenues([]);
+        return;
+      }
+
+      // Fetch venue details
+      const { data: venuesData, error: venuesError } = await supabase
         .from('venues')
         .select('id, name')
+        .in('id', confirmedVenueIds)
         .order('name');
 
-      if (error) {
-        console.error('Venues error:', error);
+      console.log('Venues data:', venuesData);
+
+      if (venuesError) {
+        console.error('Venues error:', venuesError);
+        setVenues([]);
       } else {
-        setVenues(data || []);
+        setVenues(venuesData || []);
       }
     } catch (err) {
       console.error('Venues fetch error:', err);
+      setVenues([]);
     }
   };
 
@@ -220,7 +280,7 @@ export default function EventEdit() {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'max_registrations' ? parseInt(value) : value,
+      [name]: ['max_registrations', 'total_people', 'group_size'].includes(name) ? parseInt(value) : value,
     }));
   };
 
@@ -277,12 +337,17 @@ export default function EventEdit() {
       const startDateTime = new Date(
         `${formData.start_date}T${formData.start_time}`
       );
+      
+      const endDateTime = formData.end_time 
+        ? new Date(`${formData.start_date}T${formData.end_time}`)
+        : null;
 
       console.log('Updating event with:', {
         title: formData.title,
         description: formData.description,
         image_url: imageUrl,
         start_date: startDateTime.toISOString(),
+        end_date: endDateTime?.toISOString(),
       });
 
       const { error, data } = await supabase
@@ -293,7 +358,10 @@ export default function EventEdit() {
           image_url: imageUrl,
           venue_id: formData.venue_id === 'no-venue' ? null : formData.venue_id,
           start_date: startDateTime.toISOString(),
+          end_date: endDateTime?.toISOString() || null,
           max_registrations: formData.max_registrations,
+          total_people: formData.total_people,
+          group_size: formData.group_size,
         })
         .eq('id', event.id)
         .select();
@@ -433,6 +501,25 @@ export default function EventEdit() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="end_time">End Time</Label>
+                <Input
+                  id="end_time"
+                  name="end_time"
+                  type="time"
+                  value={formData.end_time}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!formData.start_time}
+                  min={formData.start_time}
+                />
+                {formData.end_time && formData.start_time && (
+                  <p className="text-sm text-muted-foreground">
+                    Duration: {Math.round((new Date(`2000-01-01T${formData.end_time}`).getTime() - new Date(`2000-01-01T${formData.start_time}`).getTime()) / (1000 * 60))} minutes
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="venue_id">Venue (Optional)</Label>
                 <Select value={formData.venue_id} onValueChange={handleVenueChange}>
                   <SelectTrigger id="venue_id">
@@ -461,6 +548,38 @@ export default function EventEdit() {
                   min="1"
                   max="1000"
                 />
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="total_people">Total People</Label>
+                  <Input
+                    id="total_people"
+                    name="total_people"
+                    type="number"
+                    placeholder="50"
+                    value={formData.total_people}
+                    onChange={handleInputChange}
+                    required
+                    min="1"
+                    max="10000"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="group_size">People Per Group</Label>
+                  <Input
+                    id="group_size"
+                    name="group_size"
+                    type="number"
+                    placeholder="5"
+                    value={formData.group_size}
+                    onChange={handleInputChange}
+                    required
+                    min="1"
+                    max="100"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">

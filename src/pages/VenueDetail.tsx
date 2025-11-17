@@ -24,6 +24,7 @@ interface Booking {
   start_time: string;
   end_time: string;
   status: string;
+  club_id: string;
 }
 
 export default function VenueDetail() {
@@ -37,14 +38,40 @@ export default function VenueDetail() {
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
   const [dateBookingDetails, setDateBookingDetails] = useState<Booking[]>([]);
+  const [userClubId, setUserClubId] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
       console.log('[VenueDetail] Loading venue ID:', id);
       fetchVenue();
-      fetchBookings();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (user && id) {
+      fetchUserClubAndBookings();
+    }
+  }, [user, id]);
+
+  const fetchUserClubAndBookings = async () => {
+    if (!user) return;
+    
+    const { data: clubsData } = await supabase
+      .from('clubs')
+      .select('id')
+      .eq('profile_id', user.id)
+      .limit(1);
+
+    let clubId = null;
+    if (clubsData && clubsData.length > 0) {
+      clubId = clubsData[0].id;
+      setUserClubId(clubId);
+      console.log('User club ID set to:', clubId);
+    }
+    
+    // Fetch bookings after we have the club ID
+    await fetchBookings(clubId);
+  };
 
   const fetchVenue = async () => {
     console.log('[VenueDetail] Fetching venue:', id);
@@ -64,7 +91,7 @@ export default function VenueDetail() {
     setLoading(false);
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = async (clubId: string | null = null) => {
     const { data, error } = await supabase
       .from('venue_bookings')
       .select('*')
@@ -74,6 +101,9 @@ export default function VenueDetail() {
     if (error) {
       console.error(error);
     } else {
+      console.log('Fetched bookings:', data);
+      console.log('User club ID (passed):', clubId);
+      console.log('User club ID (state):', userClubId);
       setBookings(data || []);
     }
   };
@@ -157,11 +187,13 @@ export default function VenueDetail() {
     setBooking(true);
 
     // Get user's club or create one if it doesn't exist
-    let { data: club } = await supabase
+    const { data: clubsData } = await supabase
       .from('clubs')
       .select('id')
       .eq('profile_id', user.id)
-      .maybeSingle();
+      .limit(1);
+
+    let club = clubsData && clubsData.length > 0 ? clubsData[0] : null;
 
     if (!club) {
       console.log('No club found, creating one for user:', user.id);
@@ -226,12 +258,44 @@ export default function VenueDetail() {
       console.error(error);
     } else {
       toast.success('Venue booked successfully!');
-      fetchBookings();
+      fetchBookings(userClubId);
       setStartTime('');
       setEndTime('');
     }
 
     setBooking(false);
+  };
+
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!window.confirm('Are you sure you want to delete this booking?')) {
+      return;
+    }
+
+    console.log('Attempting to delete booking:', bookingId);
+
+    try {
+      const { data, error } = await supabase
+        .from('venue_bookings')
+        .delete()
+        .eq('id', bookingId)
+        .select();
+
+      console.log('Delete result:', { data, error });
+
+      if (error) {
+        toast.error(`Failed to delete booking: ${error.message}`);
+        console.error('Delete error:', error);
+      } else if (!data || data.length === 0) {
+        toast.error('Booking not found or you do not have permission to delete it');
+        console.error('No rows deleted');
+      } else {
+        toast.success('Booking deleted successfully');
+        fetchBookings(userClubId);
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      toast.error('An error occurred while deleting the booking');
+    }
   };
 
   const timeSlots = [
@@ -289,10 +353,21 @@ export default function VenueDetail() {
                 )}
               </div>
               <CardHeader>
-                <CardTitle className="text-2xl">{venue.name}</CardTitle>
-                <CardDescription>
-                  {venue.description || 'Professional venue space'}
-                </CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-2xl">{venue.name}</CardTitle>
+                    <CardDescription>
+                      {venue.description || 'Professional venue space'}
+                    </CardDescription>
+                  </div>
+                  {userRole === 'faculty' && (
+                    <Button variant="outline" size="sm" asChild>
+                      <Link to={`/venues/${id}/edit`}>
+                        Edit Venue
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -337,6 +412,12 @@ export default function VenueDetail() {
                       today.setHours(0, 0, 0, 0);
                       return date < today;
                     }}
+                    modifiers={{
+                      booked: (date) => isDateBooked(date)
+                    }}
+                    modifiersClassNames={{
+                      booked: 'bg-orange-100 text-orange-900 font-bold'
+                    }}
                     className="rounded-md border"
                   />
                   {selectedDate && dateBookingDetails.length > 0 && (
@@ -346,12 +427,26 @@ export default function VenueDetail() {
                         {dateBookingDetails.map((booking, idx) => {
                           const startTime = new Date(booking.start_time);
                           const endTime = new Date(booking.end_time);
+                          // Show delete button for club users (they can only delete their own bookings anyway due to RLS)
+                          const canDelete = userRole === 'club';
                           return (
-                            <div key={idx} className="text-sm text-orange-800 bg-white p-2 rounded border border-orange-200">
-                              <p>
-                                <strong>{startTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {endTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
-                              </p>
-                              <p className="text-xs text-orange-600">Status: {booking.status}</p>
+                            <div key={idx} className="text-sm text-orange-800 bg-white p-2 rounded border border-orange-200 flex items-center justify-between">
+                              <div>
+                                <p>
+                                  <strong>{startTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {endTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
+                                </p>
+                                <p className="text-xs text-orange-600">Status: {booking.status}</p>
+                              </div>
+                              {canDelete && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDeleteBooking(booking.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                  Delete
+                                </Button>
+                              )}
                             </div>
                           );
                         })}
