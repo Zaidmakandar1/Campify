@@ -23,6 +23,16 @@ export default function Home() {
     fetchClubRankings();
   }, []);
 
+  useEffect(() => {
+    if (upcomingEvents.length === 0) return;
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % upcomingEvents.length);
+    }, 5000); // Auto-rotate every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [upcomingEvents.length]);
+
   const fetchUpcomingEvents = async () => {
     const { data } = await supabase
       .from('events')
@@ -93,44 +103,54 @@ export default function Home() {
           </CardHeader>
           <CardContent className="relative">
             {upcomingEvents.length > 0 ? (
-              <div className="relative h-64">
-                {/* Slider Content */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-full max-w-4xl">
-                    <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-8 text-white shadow-xl">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-3xl font-bold mb-2">
-                            {upcomingEvents[currentSlide]?.title}
-                          </h3>
-                          <p className="text-white/90 mb-4">
-                            {upcomingEvents[currentSlide]?.description}
-                          </p>
-                          <div className="flex flex-wrap gap-4 text-sm">
-                            <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
-                              <Calendar className="h-4 w-4" />
-                              {new Date(upcomingEvents[currentSlide]?.start_date).toLocaleDateString()}
-                            </div>
-                            {upcomingEvents[currentSlide]?.venues && (
-                              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
-                                <MapPin className="h-4 w-4" />
-                                {upcomingEvents[currentSlide]?.venues.name}
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
-                              <Users className="h-4 w-4" />
-                              {upcomingEvents[currentSlide]?.current_registrations} / {upcomingEvents[currentSlide]?.max_registrations}
-                            </div>
-                          </div>
-                        </div>
-                        <Button asChild className="bg-white text-primary hover:bg-white/90 shadow-lg font-semibold">
-                          <Link to={`/hub/event/${upcomingEvents[currentSlide]?.id}`}>
-                            View Details
-                          </Link>
-                        </Button>
+              <div className="relative h-80 rounded-lg overflow-hidden flex">
+                {/* Left Side - Light Orange Background with Event Details */}
+                <div className="w-1/2 bg-orange-50 p-8 flex flex-col justify-center space-y-4 relative z-20">
+                  <div>
+                    <h3 className="text-4xl font-bold text-foreground">
+                      {upcomingEvents[currentSlide]?.title}
+                    </h3>
+                    <p className="text-muted-foreground line-clamp-2 mt-2">
+                      {upcomingEvents[currentSlide]?.description}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      {new Date(upcomingEvents[currentSlide]?.start_date).toLocaleDateString()}
+                    </div>
+                    {upcomingEvents[currentSlide]?.venues && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="h-4 w-4" />
+                        {upcomingEvents[currentSlide]?.venues.name}
                       </div>
+                    )}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Users className="h-4 w-4" />
+                      {upcomingEvents[currentSlide]?.current_registrations} / {upcomingEvents[currentSlide]?.max_registrations}
                     </div>
                   </div>
+                  <Button asChild className="bg-primary text-white hover:bg-primary/90 shadow-lg font-semibold w-fit mt-4">
+                    <Link to={`/hub/event/${upcomingEvents[currentSlide]?.id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </div>
+
+                {/* Right Side - Event Image */}
+                <div className="w-1/2 relative overflow-hidden">
+                  {upcomingEvents[currentSlide]?.image_url ? (
+                    <div 
+                      className="w-full h-full"
+                      style={{
+                        backgroundImage: `url('${upcomingEvents[currentSlide]?.image_url}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-r from-primary to-accent" />
+                  )}
                 </div>
 
                 {/* Navigation Buttons */}

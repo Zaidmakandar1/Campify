@@ -37,8 +37,16 @@ export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <MapPin className="h-16 w-16 text-primary" />
+      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
+        {venue.image_url ? (
+          <img
+            src={venue.image_url}
+            alt={venue.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <MapPin className="h-16 w-16 text-primary" />
+        )}
       </div>
       
       <CardHeader className="flex-1">

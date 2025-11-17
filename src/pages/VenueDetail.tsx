@@ -36,6 +36,7 @@ export default function VenueDetail() {
   const [endTime, setEndTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
+  const [dateBookingDetails, setDateBookingDetails] = useState<Booking[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -68,12 +69,62 @@ export default function VenueDetail() {
       .from('venue_bookings')
       .select('*')
       .eq('venue_id', id)
-      .eq('status', 'confirmed');
+      .in('status', ['confirmed', 'pending']);
 
     if (error) {
       console.error(error);
     } else {
       setBookings(data || []);
+    }
+  };
+
+  const isDateBooked = (date: Date) => {
+    return bookings.some((booking) => {
+      const bookingStart = new Date(booking.start_time);
+      const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const bookingDate = new Date(bookingStart.getFullYear(), bookingStart.getMonth(), bookingStart.getDate());
+      
+      return checkDate.getTime() === bookingDate.getTime();
+    });
+  };
+
+  const isTimeSlotBooked = (date: Date, time: string) => {
+    const [hours, mins] = time.split(':').map(Number);
+    const checkTime = new Date(date);
+    checkTime.setHours(hours, mins);
+
+    return bookings.some((booking) => {
+      const bookingStart = new Date(booking.start_time);
+      const bookingEnd = new Date(booking.end_time);
+      const bookingDate = new Date(bookingStart.getFullYear(), bookingStart.getMonth(), bookingStart.getDate());
+      const checkDate = new Date(checkTime.getFullYear(), checkTime.getMonth(), checkTime.getDate());
+
+      if (bookingDate.getTime() !== checkDate.getTime()) return false;
+
+      const checkMins = hours * 60 + mins;
+      const bookingStartMins = bookingStart.getHours() * 60 + bookingStart.getMinutes();
+      const bookingEndMins = bookingEnd.getHours() * 60 + bookingEnd.getMinutes();
+
+      return checkMins >= bookingStartMins && checkMins < bookingEndMins;
+    });
+  };
+
+  const getDateBookingDetails = (date: Date) => {
+    return bookings.filter((booking) => {
+      const bookingStart = new Date(booking.start_time);
+      const checkDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const bookingDate = new Date(bookingStart.getFullYear(), bookingStart.getMonth(), bookingStart.getDate());
+      
+      return checkDate.getTime() === bookingDate.getTime();
+    }).sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
+  };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (date) {
+      setDateBookingDetails(getDateBookingDetails(date));
+      setStartTime('');
+      setEndTime('');
     }
   };
 
@@ -143,6 +194,23 @@ export default function VenueDetail() {
     const bookingEndTime = new Date(selectedDate);
     bookingEndTime.setHours(endHours, endMins);
 
+    // Check for time conflicts before booking
+    const hasConflict = bookings.some((booking) => {
+      const bookingStart = new Date(booking.start_time);
+      const bookingEnd = new Date(booking.end_time);
+      
+      return (
+        (bookingStartTime < bookingEnd && bookingEndTime > bookingStart) &&
+        bookingStart.toDateString() === bookingStartTime.toDateString()
+      );
+    });
+
+    if (hasConflict) {
+      toast.error('This time slot is already booked. Please select another time.');
+      setBooking(false);
+      return;
+    }
+
     const { error } = await supabase
       .from('venue_bookings')
       .insert({
@@ -150,14 +218,14 @@ export default function VenueDetail() {
         club_id: club.id,
         start_time: bookingStartTime.toISOString(),
         end_time: bookingEndTime.toISOString(),
-        status: 'pending'
+        status: 'confirmed'
       });
 
     if (error) {
       toast.error('Failed to book venue');
       console.error(error);
     } else {
-      toast.success('Booking request submitted! You will be notified once approved.');
+      toast.success('Venue booked successfully!');
       fetchBookings();
       setStartTime('');
       setEndTime('');
@@ -209,8 +277,16 @@ export default function VenueDetail() {
           {/* Venue Info */}
           <div className="space-y-6">
             <Card>
-              <div className="h-64 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center rounded-t-lg">
-                <MapPin className="h-24 w-24 text-primary" />
+              <div className="h-64 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center rounded-t-lg overflow-hidden">
+                {venue.image_url ? (
+                  <img
+                    src={venue.image_url}
+                    alt={venue.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <MapPin className="h-24 w-24 text-primary" />
+                )}
               </div>
               <CardHeader>
                 <CardTitle className="text-2xl">{venue.name}</CardTitle>
@@ -255,44 +331,83 @@ export default function VenueDetail() {
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
-                    disabled={(date) => date < new Date()}
+                    onSelect={handleDateSelect}
+                    disabled={(date) => {
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      return date < today;
+                    }}
                     className="rounded-md border"
                   />
+                  {selectedDate && dateBookingDetails.length > 0 && (
+                    <div className="mt-4 p-4 bg-orange-100 border border-orange-300 rounded-lg">
+                      <p className="font-medium text-orange-900 mb-3">Bookings on {selectedDate.toLocaleDateString()}:</p>
+                      <div className="space-y-2">
+                        {dateBookingDetails.map((booking, idx) => {
+                          const startTime = new Date(booking.start_time);
+                          const endTime = new Date(booking.end_time);
+                          return (
+                            <div key={idx} className="text-sm text-orange-800 bg-white p-2 rounded border border-orange-200">
+                              <p>
+                                <strong>{startTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})} - {endTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</strong>
+                              </p>
+                              <p className="text-xs text-orange-600">Status: {booking.status}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-orange-700 mt-3">You can book available time slots below</p>
+                    </div>
+                  )}
+                  {selectedDate && dateBookingDetails.length === 0 && isDateBooked(selectedDate) && (
+                    <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+                      This date appears booked but no details available. Please check other dates.
+                    </div>
+                  )}
                 </div>
 
                 <div>
                   <p className="font-medium mb-3">Select Start Time:</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={startTime === time ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setStartTime(time)}
-                        className="text-sm"
-                      >
-                        {time}
-                      </Button>
-                    ))}
+                    {timeSlots.map((time) => {
+                      const isBooked = selectedDate && isTimeSlotBooked(selectedDate, time);
+                      return (
+                        <Button
+                          key={time}
+                          variant={startTime === time ? "default" : isBooked ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => !isBooked && setStartTime(time)}
+                          disabled={isBooked}
+                          className="text-sm"
+                          title={isBooked ? 'Already booked' : ''}
+                        >
+                          {time}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 <div>
                   <p className="font-medium mb-3">Select End Time:</p>
                   <div className="grid grid-cols-3 gap-2">
-                    {timeSlots.map((time) => (
-                      <Button
-                        key={time}
-                        variant={endTime === time ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setEndTime(time)}
-                        disabled={startTime && time <= startTime}
-                        className="text-sm"
-                      >
-                        {time}
-                      </Button>
-                    ))}
+                    {timeSlots.map((time) => {
+                      const isBooked = selectedDate && isTimeSlotBooked(selectedDate, time);
+                      const isBeforeStart = startTime && time <= startTime;
+                      return (
+                        <Button
+                          key={time}
+                          variant={endTime === time ? "default" : isBooked ? "destructive" : "outline"}
+                          size="sm"
+                          onClick={() => !isBooked && !isBeforeStart && setEndTime(time)}
+                          disabled={isBeforeStart || isBooked}
+                          className="text-sm"
+                          title={isBooked ? 'Already booked' : isBeforeStart ? 'Must be after start time' : ''}
+                        >
+                          {time}
+                        </Button>
+                      );
+                    })}
                   </div>
                 </div>
 

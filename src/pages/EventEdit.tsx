@@ -43,6 +43,7 @@ export default function EventEdit() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [deleteExistingImage, setDeleteExistingImage] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -150,10 +151,8 @@ export default function EventEdit() {
 
   const removeImage = () => {
     setImageFile(null);
-    // Only clear preview if this is a new file (not from database)
-    if (!event?.image_url || imageFile) {
-      setImagePreview(null);
-    }
+    setImagePreview(null);
+    setDeleteExistingImage(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -241,6 +240,17 @@ export default function EventEdit() {
     try {
       let imageUrl = event.image_url;
 
+      // Handle image deletion if user removed the image
+      if (deleteExistingImage) {
+        console.log('User removed image, setting to null');
+        imageUrl = null;
+        // Delete old image from storage if it exists
+        if (event.image_url) {
+          console.log('Deleting image from storage:', event.image_url);
+          await deleteOldImage(event.image_url);
+        }
+      }
+
       // Upload new image if selected
       if (imageFile) {
         console.log('New image file detected, uploading...');
@@ -250,17 +260,17 @@ export default function EventEdit() {
         if (newImageUrl) {
           imageUrl = newImageUrl;
           console.log('Using new image URL:', imageUrl);
-          // Delete old image if it exists
-          if (event.image_url) {
+          // Delete old image if it exists (when replacing)
+          if (event.image_url && !deleteExistingImage) {
             console.log('Deleting old image:', event.image_url);
             await deleteOldImage(event.image_url);
           }
         } else {
           console.warn('Image upload failed, proceeding without image');
-          imageUrl = event.image_url; // Keep old image if upload failed
+          imageUrl = deleteExistingImage ? null : event.image_url; // Keep old image if upload failed and we didn't mark for deletion
           toast.error('Image upload failed, but you can update event without image');
         }
-      } else {
+      } else if (!deleteExistingImage) {
         console.log('No new image file, keeping existing URL:', imageUrl);
       }
 
