@@ -22,6 +22,7 @@ interface Feedback {
   category: string;
   upvotes: number;
   is_resolved: boolean;
+  status?: string;
   created_at: string;
   feedback_comments: { count: number }[];
 }
@@ -111,6 +112,34 @@ export default function Voice() {
     }
   };
 
+  const handleStatusChange = async (feedbackId: string, status: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('feedback')
+        .update({
+          status,
+          is_resolved: status === 'resolved',
+          resolved_by: status === 'resolved' ? user.id : null,
+          resolved_at: status === 'resolved' ? new Date().toISOString() : null
+        })
+        .eq('id', feedbackId);
+
+      if (error) {
+        toast.error('Failed to update status');
+        console.error(error);
+      } else {
+        toast.success(`Status updated to ${status.replace('_', ' ')}`);
+        fetchFeedbacks();
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast.error('Failed to update status');
+    }
+  };
+
 
 
   return (
@@ -151,17 +180,18 @@ export default function Voice() {
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {feedbacks.map((feedback) => (
               <FeedbackCard
                 key={feedback.id}
                 feedback={feedback}
                 onUpvote={handleUpvote}
+                onStatusChange={handleStatusChange}
               />
             ))}
 
             {feedbacks.length === 0 && (
-              <div className="text-center py-12">
+              <div className="col-span-full text-center py-12">
                 <p className="text-muted-foreground">No feedback found. Be the first to share!</p>
               </div>
             )}

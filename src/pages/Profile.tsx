@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MessageSquare, Calendar } from 'lucide-react';
+import { User, MessageSquare, Calendar, LayoutDashboard, Plus, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Profile() {
@@ -63,6 +64,41 @@ export default function Profile() {
             Manage your account and view your activity
           </p>
         </div>
+
+        {/* Club Management Dashboard - Only for Club Reps */}
+        {userRole === 'club' && (
+          <Card className="mb-6 border-accent bg-gradient-to-r from-accent/5 to-primary/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <LayoutDashboard className="h-5 w-5" />
+                Club Management Dashboard
+              </CardTitle>
+              <CardDescription>
+                Manage your club, create events, and book venues
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-3">
+              <Button asChild size="lg" className="flex-1 min-w-[200px]">
+                <Link to="/club/dashboard">
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                  Club Dashboard
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="flex-1 min-w-[200px]">
+                <Link to="/club/events/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Event
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="flex-1 min-w-[200px]">
+                <Link to="/club/venues">
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Book Venue
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Profile Info */}

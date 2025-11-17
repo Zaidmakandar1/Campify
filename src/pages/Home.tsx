@@ -106,35 +106,13 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {/* Role-specific shortcuts */}
-        {userRole === 'club' && (
-          <div className="mt-8">
-            <Card className="border-accent">
-              <CardHeader>
-                <CardTitle>Club Representative Dashboard</CardTitle>
-                <CardDescription>Quick actions for club management</CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-wrap gap-4">
-                <Button asChild>
-                  <Link to="/club/dashboard">Club Dashboard</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link to="/club/events/new">Create Event</Link>
-                </Button>
-                <Button asChild variant="outline">
-                  <Link to="/club/venues">Book Venue</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
+        {/* Faculty Admin Section */}
         {userRole === 'faculty' && (
           <div className="mt-8">
             <Card className="border-primary">
               <CardHeader>
-                <CardTitle>Admin Dashboard</CardTitle>
-                <CardDescription>Faculty administration tools</CardDescription>
+                <CardTitle>Faculty Dashboard</CardTitle>
+                <CardDescription>Administration and feedback management tools</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button asChild>
