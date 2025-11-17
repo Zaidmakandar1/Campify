@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { VenueCard } from '@/components/VenueCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, MapPin, Info } from 'lucide-react';
+import { ArrowLeft, MapPin, Info, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -21,11 +21,12 @@ interface Venue {
 export default function PublicVenues() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
-  const { userRole } = useAuth();
+  const { userRole, user } = useAuth();
 
   useEffect(() => {
+    console.log('[PublicVenues] Loaded - userRole:', userRole, 'user:', user?.email);
     fetchVenues();
-  }, []);
+  }, [userRole, user]);
 
   const fetchVenues = async () => {
     setLoading(true);
@@ -56,10 +57,22 @@ export default function PublicVenues() {
             </Link>
           </Button>
           
-          <h1 className="text-4xl font-bold mb-2">Campus Venues</h1>
-          <p className="text-muted-foreground">
-            Explore available venues for events and activities
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Campus Venues</h1>
+              <p className="text-muted-foreground">
+                Explore available venues for events and activities
+              </p>
+            </div>
+            {userRole === 'faculty' && (
+              <Button asChild>
+                <Link to="/venues/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Venue
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Info Card for Different User Roles */}
@@ -108,17 +121,18 @@ export default function PublicVenues() {
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {venues.map((venue) => (
-              <VenueCard 
-                key={venue.id} 
-                venue={venue}
-                linkTo={
-                  userRole === 'club' 
-                    ? `/club/venues/${venue.id}` 
-                    : undefined
-                }
-              />
-            ))}
+            {venues.map((venue) => {
+              const linkToValue = userRole === 'club' ? `/venues/${venue.id}` : undefined;
+              console.log(`[PublicVenues] Rendering venue ${venue.id}: userRole=${userRole}, linkTo=${linkToValue}, canEdit=${userRole === 'faculty'}`);
+              return (
+                <VenueCard 
+                  key={venue.id} 
+                  venue={venue}
+                  canEdit={userRole === 'faculty'}
+                  linkTo={linkToValue}
+                />
+              );
+            })}
 
             {venues.length === 0 && (
               <div className="col-span-full text-center py-12">

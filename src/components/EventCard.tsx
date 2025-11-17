@@ -13,6 +13,7 @@ interface EventCardProps {
     max_registrations: number;
     current_registrations: number;
     is_completed: boolean;
+    image_url?: string | null;
     venues?: { name: string } | null;
     clubs?: { name: string } | null;
   };
@@ -22,8 +23,16 @@ interface EventCardProps {
 export function EventCard({ event, showClubName = true }: EventCardProps) {
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <Calendar className="h-16 w-16 text-primary" />
+      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
+        {event.image_url ? (
+          <img
+            src={event.image_url}
+            alt={event.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <Calendar className="h-16 w-16 text-primary" />
+        )}
       </div>
       
       <CardHeader className="flex-1">

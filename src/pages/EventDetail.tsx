@@ -7,20 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Calendar, MapPin, Users, Star, Send } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, Star, Send, Edit, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Event {
   id: string;
   title: string;
   description: string;
-  image_url: string;
+  image_url: string | null;
   start_date: string;
   max_registrations: number;
   current_registrations: number;
   is_completed: boolean;
+  club_id: string;
   venues: { name: string } | null;
-  clubs: { name: string } | null;
+  clubs: { name: string; profile_id: string } | null;
 }
 
 interface Review {
@@ -37,6 +38,7 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [loading, setLoading] = useState(true);
   const [registering, setRegistering] = useState(false);
@@ -53,7 +55,7 @@ export default function EventDetail() {
   const fetchEvent = async () => {
     const { data, error } = await supabase
       .from('events')
-      .select('*, venues(name), clubs(name)')
+      .select('*, venues(name), clubs(name, profile_id)')
       .eq('id', id)
       .single();
 
@@ -62,6 +64,10 @@ export default function EventDetail() {
       console.error(error);
     } else {
       setEvent(data);
+      // Check if current user is the event owner
+      if (data.clubs && data.clubs.profile_id === user?.id) {
+        setIsOwner(true);
+      }
     }
     setLoading(false);
   };
@@ -186,6 +192,52 @@ export default function EventDetail() {
     setSubmittingReview(false);
   };
 
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+    
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this event? This action cannot be undone. All registrations will be cancelled.'
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      // Delete old image if it exists
+      if (event.image_url) {
+        const urlParts = event.image_url.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const clubId = urlParts[urlParts.length - 2];
+        
+        await supabase.storage
+          .from('event-images')
+          .remove([`${clubId}/${fileName}`])
+          .catch(() => {
+            // Ignore error if image doesn't exist
+          });
+      }
+
+      // Delete event (cascades to registrations and reviews)
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', event.id);
+
+      if (error) {
+        toast.error('Failed to delete event');
+        console.error(error);
+      } else {
+        toast.success('Event deleted successfully');
+        // Redirect to hub after short delay
+        setTimeout(() => {
+          window.location.href = '/hub';
+        }, 500);
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('An error occurred while deleting the event');
+    }
+  };
+
   const renderStars = (rating: number, interactive = false, onRate?: (rating: number) => void) => {
     return (
       <div className="flex gap-1">
@@ -246,8 +298,16 @@ export default function EventDetail() {
           {/* Event Details */}
           <div className="lg:col-span-2 space-y-6">
             <Card>
-              <div className="h-64 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center rounded-t-lg">
-                <Calendar className="h-24 w-24 text-primary" />
+              <div className="h-64 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center rounded-t-lg overflow-hidden">
+                {event.image_url ? (
+                  <img
+                    src={event.image_url}
+                    alt={event.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Calendar className="h-24 w-24 text-primary" />
+                )}
               </div>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -264,14 +324,21 @@ export default function EventDetail() {
                       ) : (
                         <Badge>Upcoming</Badge>
                       )}
-                      {averageRating > 0 && (
-                        <Badge variant="outline" className="gap-1">
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {averageRating.toFixed(1)}
-                        </Badge>
-                      )}
                     </div>
                   </div>
+                  {isOwner && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="ml-2"
+                    >
+                      <Link to={`/club/events/${event.id}/edit`}>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Event
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -409,6 +476,17 @@ export default function EventDetail() {
                   <p className="text-sm text-muted-foreground text-center">
                     Thanks for attending! Share your experience above.
                   </p>
+                )}
+
+                {isOwner && (
+                  <Button
+                    onClick={handleDeleteEvent}
+                    variant="destructive"
+                    className="w-full"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Event
+                  </Button>
                 )}
               </CardContent>
             </Card>

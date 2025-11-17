@@ -16,10 +16,13 @@ import AdminVoice from "./pages/AdminVoice";
 import Hub from "./pages/Hub";
 import EventDetail from "./pages/EventDetail";
 import EventNew from "./pages/EventNew";
+import EventEdit from "./pages/EventEdit";
 import ClubDashboard from "./pages/ClubDashboard";
 import ClubVenues from "./pages/ClubVenues";
 import PublicVenues from "./pages/PublicVenues";
 import VenueDetail from "./pages/VenueDetail";
+import VenueNew from "./pages/VenueNew";
+import VenueEdit from "./pages/VenueEdit";
 import Market from "./pages/Market";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -93,6 +96,14 @@ const App = () => (
               }
             />
             <Route
+              path="/club/events/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['club']}>
+                  <EventEdit />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/hub/event/:id"
               element={
                 <ProtectedRoute>
@@ -113,6 +124,30 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <PublicVenues />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/venues/:id"
+              element={
+                <ProtectedRoute>
+                  <VenueDetail />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/venues/new"
+              element={
+                <ProtectedRoute allowedRoles={['faculty']}>
+                  <VenueNew />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/venues/:id/edit"
+              element={
+                <ProtectedRoute allowedRoles={['faculty']}>
+                  <VenueEdit />
                 </ProtectedRoute>
               }
             />

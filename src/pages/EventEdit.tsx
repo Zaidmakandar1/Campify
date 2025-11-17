@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Calendar, Upload, X } from 'lucide-react';
+import { Calendar, Upload, X, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Venue {
@@ -17,129 +17,129 @@ interface Venue {
   name: string;
 }
 
-export default function EventNew() {
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string | null;
+  venue_id: string | null;
+  start_date: string;
+  max_registrations: number;
+  club_id: string;
+}
+
+export default function EventEdit() {
+  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [club, setClub] = useState<any>(null);
+  const [isNotOwner, setIsNotOwner] = useState(false);
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [venueId, setVenueId] = useState('no-venue');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuth();
-  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    venue_id: 'no-venue',
+    start_date: '',
+    start_time: '',
+    max_registrations: 100,
+  });
 
   useEffect(() => {
-    if (user) {
-      setPageLoading(true);
-      fetchClubAndVenues().finally(() => setPageLoading(false));
+    if (id && user) {
+      fetchEvent();
+      fetchVenues();
     }
-  }, [user]);
+  }, [id, user]);
 
-  const fetchClubAndVenues = async () => {
+  const fetchEvent = async () => {
     try {
-      console.log('Fetching club and venues for user:', user?.id);
-      
-      // Fetch user's club
-      const { data: clubData, error: clubError } = await supabase
-        .from('clubs')
-        .select('*')
-        .eq('profile_id', user?.id)
-        .maybeSingle();
+      const { data, error } = await supabase
+        .from('events')
+        .select('*, clubs(profile_id)')
+        .eq('id', id)
+        .single();
 
-      if (clubError) {
-        console.error('Club fetch error:', clubError);
-        // Don't navigate away - allow user to create club from here
-        console.log('No club found, will show create club form');
-        setClub(null);
-      } else if (!clubData) {
-        console.log('No club found for user, will show create form');
-        setClub(null);
-      } else {
-        console.log('Club found:', clubData);
-        setClub(clubData);
+      if (error) {
+        toast.error('Failed to load event');
+        navigate('/hub');
+        return;
       }
 
-      // Fetch venues
-      try {
-        const { data: venuesData, error: venuesError } = await supabase
-          .from('venues')
-          .select('id, name')
-          .order('name');
-
-        if (venuesError) {
-          console.error('Venues error:', venuesError);
-          toast.error('Failed to load venues');
-        } else {
-          console.log('Venues loaded:', venuesData?.length);
-          setVenues(venuesData || []);
-        }
-      } catch (err) {
-        console.error('Venues fetch error:', err);
-        toast.error('Error loading venues');
-        setVenues([]);
+      // Check if user is the event owner (club owner)
+      if (data.clubs.profile_id !== user?.id) {
+        setIsNotOwner(true);
+        toast.error('You can only edit events you created');
+        navigate('/hub');
+        return;
       }
-      
+
+      setEvent(data);
+
+      // Parse datetime
+      const eventDate = new Date(data.start_date);
+      const dateString = eventDate.toISOString().split('T')[0];
+      const timeString = eventDate.toTimeString().slice(0, 5);
+
+      setFormData({
+        title: data.title,
+        description: data.description,
+        venue_id: data.venue_id || 'no-venue',
+        start_date: dateString,
+        start_time: timeString,
+        max_registrations: data.max_registrations,
+      });
+
+      // Set image preview from existing image
+      if (data.image_url) {
+        setImagePreview(data.image_url);
+      }
     } catch (error) {
-      console.error('General fetch error:', error);
-      toast.error('Failed to load data. Please try again.');
+      console.error('Error fetching event:', error);
+      toast.error('Failed to load event');
+      navigate('/hub');
+    } finally {
+      setPageLoading(false);
     }
   };
 
-  const checkVenueAvailability = async (venueIdToCheck: string, dateStr: string, startTimeStr: string, endTimeStr: string): Promise<boolean> => {
-    if (venueIdToCheck === 'no-venue') return true; // No venue selected, no conflict possible
-
+  const fetchVenues = async () => {
     try {
-      const [startHours, startMins] = startTimeStr.split(':').map(Number);
-      const [endHours, endMins] = endTimeStr.split(':').map(Number);
-
-      const eventStart = new Date(`${dateStr}T${startTimeStr}`);
-      const eventEnd = new Date(`${dateStr}T${endTimeStr}`);
-
-      // Fetch all confirmed bookings for this venue on this date
-      const { data: bookings, error } = await supabase
-        .from('venue_bookings')
-        .select('*')
-        .eq('venue_id', venueIdToCheck)
-        .eq('status', 'confirmed')
-        .lte('start_time', eventEnd.toISOString())
-        .gte('end_time', eventStart.toISOString());
+      const { data, error } = await supabase
+        .from('venues')
+        .select('id, name')
+        .order('name');
 
       if (error) {
-        console.error('Error checking venue availability:', error);
-        return true; // Allow booking if we can't check (safety measure)
+        console.error('Venues error:', error);
+      } else {
+        setVenues(data || []);
       }
-
-      if (bookings && bookings.length > 0) {
-        return false; // Venue is booked during this time
-      }
-
-      return true; // Venue is available
-    } catch (error) {
-      console.error('Venue availability check error:', error);
-      return true; // Allow booking if check fails
+    } catch (err) {
+      console.error('Venues fetch error:', err);
     }
   };
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error('Please select an image file');
         return;
       }
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast.error('Image size should be less than 5MB');
         return;
       }
       setImageFile(file);
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -150,20 +150,23 @@ export default function EventNew() {
 
   const removeImage = () => {
     setImageFile(null);
-    setImagePreview(null);
+    // Only clear preview if this is a new file (not from database)
+    if (!event?.image_url || imageFile) {
+      setImagePreview(null);
+    }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const uploadEventImage = async (): Promise<string | null> => {
-    if (!imageFile || !club) return null;
+    if (!imageFile || !event) return null;
 
     try {
       setIsUploadingImage(true);
       const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${club.id}/${Date.now()}.${fileExt}`;
-      
+      const fileName = `${event.club_id}/${Date.now()}.${fileExt}`;
+
       console.log('Starting image upload:', { fileName, fileSize: imageFile.size });
 
       const { data, error: uploadError } = await supabase.storage
@@ -181,7 +184,7 @@ export default function EventNew() {
 
       console.log('Upload successful:', data);
 
-      // Get public URL
+      // Get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('event-images')
         .getPublicUrl(fileName);
@@ -197,88 +200,107 @@ export default function EventNew() {
     }
   };
 
+  const deleteOldImage = async (imageUrl: string) => {
+    try {
+      const urlParts = imageUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const clubId = urlParts[urlParts.length - 2];
+
+      await supabase.storage
+        .from('event-images')
+        .remove([`${clubId}/${fileName}`]);
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+      // Don't fail the update if image deletion fails
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'max_registrations' ? parseInt(value) : value,
+    }));
+  };
+
+  const handleVenueChange = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      venue_id: value,
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!club) return;
+    if (!event) return;
 
     setIsLoading(true);
 
     try {
-      // Validate times
-      if (!startDate || !startTime || !endTime) {
-        toast.error('Please fill in all date and time fields');
-        setIsLoading(false);
-        return;
-      }
+      let imageUrl = event.image_url;
 
-      const [startHours, startMins] = startTime.split(':').map(Number);
-      const [endHours, endMins] = endTime.split(':').map(Number);
-      const startTotalMins = startHours * 60 + startMins;
-      const endTotalMins = endHours * 60 + endMins;
-
-      if (endTotalMins <= startTotalMins) {
-        toast.error('End time must be after start time');
-        setIsLoading(false);
-        return;
-      }
-
-      // Check venue availability if a venue is selected
-      if (venueId !== 'no-venue') {
-        const isAvailable = await checkVenueAvailability(venueId, startDate, startTime, endTime);
-        if (!isAvailable) {
-          toast.error('This venue is already booked for the selected date and time');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Upload image first if provided
-      let imageUrl: string | null = null;
+      // Upload new image if selected
       if (imageFile) {
-        imageUrl = await uploadEventImage();
-        // If image upload fails, we can still continue or abort
-        if (!imageUrl) {
-          toast.error('Image upload failed, but you can create event without image');
-          // Uncomment below to abort if image is required
-          // setIsLoading(false);
-          // return;
+        console.log('New image file detected, uploading...');
+        const newImageUrl = await uploadEventImage();
+        console.log('Upload result:', newImageUrl);
+        
+        if (newImageUrl) {
+          imageUrl = newImageUrl;
+          console.log('Using new image URL:', imageUrl);
+          // Delete old image if it exists
+          if (event.image_url) {
+            console.log('Deleting old image:', event.image_url);
+            await deleteOldImage(event.image_url);
+          }
+        } else {
+          console.warn('Image upload failed, proceeding without image');
+          imageUrl = event.image_url; // Keep old image if upload failed
+          toast.error('Image upload failed, but you can update event without image');
         }
+      } else {
+        console.log('No new image file, keeping existing URL:', imageUrl);
       }
 
-      const formData = new FormData(e.currentTarget);
-      const title = formData.get('title') as string;
-      const description = formData.get('description') as string;
-      const maxRegistrations = parseInt(formData.get('max_registrations') as string);
+      const startDateTime = new Date(
+        `${formData.start_date}T${formData.start_time}`
+      );
 
-      // Combine date and time for start and end
-      const startDateTime = new Date(`${startDate}T${startTime}`);
-      const endDateTime = new Date(`${startDate}T${endTime}`);
+      console.log('Updating event with:', {
+        title: formData.title,
+        description: formData.description,
+        image_url: imageUrl,
+        start_date: startDateTime.toISOString(),
+      });
 
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('events')
-        .insert([{
-          club_id: club.id,
-          title,
-          description,
-          image_url: imageUrl, // Add the image URL
-          venue_id: venueId === 'no-venue' ? null : venueId,
+        .update({
+          title: formData.title,
+          description: formData.description,
+          image_url: imageUrl,
+          venue_id: formData.venue_id === 'no-venue' ? null : formData.venue_id,
           start_date: startDateTime.toISOString(),
-          end_date: endDateTime.toISOString(),
-          max_registrations: maxRegistrations,
-          current_registrations: 0,
-          is_completed: false
-        }]);
+          max_registrations: formData.max_registrations,
+        })
+        .eq('id', event.id)
+        .select();
+
+      console.log('Update response:', { error, data });
 
       if (error) {
-        toast.error('Failed to create event');
-        console.error(error);
+        console.error('Database update error:', error);
+        toast.error('Failed to update event');
       } else {
-        toast.success('Event created successfully!');
-        navigate('/hub');
+        console.log('Event updated successfully:', data);
+        toast.success('Event updated successfully!');
+        navigate(`/hub/event/${event.id}`);
       }
     } catch (error) {
-      console.error('Event creation error:', error);
-      toast.error('An error occurred while creating the event');
+      console.error('Event update error:', error);
+      toast.error('An error occurred while updating the event');
     } finally {
       setIsLoading(false);
     }
@@ -290,7 +312,25 @@ export default function EventNew() {
         <Navbar />
         <div className="flex flex-col items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mb-4" />
-          <p className="text-muted-foreground">Loading event creation...</p>
+          <p className="text-muted-foreground">Loading event...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isNotOwner || !event) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="pt-6">
+              <p className="text-red-700">You don't have permission to edit this event.</p>
+              <Button onClick={() => navigate('/hub')} className="mt-4">
+                Back to Events
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -299,8 +339,19 @@ export default function EventNew() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-8 max-w-2xl">
+        <div className="mb-6 flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(`/hub/event/${event.id}`)}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">Edit Event</h1>
+        </div>
+
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -308,9 +359,9 @@ export default function EventNew() {
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl">Create New Event</CardTitle>
+                <CardTitle className="text-2xl">Update Event Details</CardTitle>
                 <CardDescription>
-                  Create an engaging event for your club members
+                  Modify your event information and image
                 </CardDescription>
               </div>
             </div>
@@ -324,6 +375,8 @@ export default function EventNew() {
                   id="title"
                   name="title"
                   placeholder="Enter event title"
+                  value={formData.title}
+                  onChange={handleInputChange}
                   required
                   maxLength={200}
                 />
@@ -335,6 +388,8 @@ export default function EventNew() {
                   id="description"
                   name="description"
                   placeholder="Describe your event..."
+                  value={formData.description}
+                  onChange={handleInputChange}
                   required
                   rows={4}
                   className="resize-none"
@@ -348,10 +403,9 @@ export default function EventNew() {
                     id="start_date"
                     name="start_date"
                     type="date"
+                    value={formData.start_date}
+                    onChange={handleInputChange}
                     required
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
 
@@ -361,35 +415,16 @@ export default function EventNew() {
                     id="start_time"
                     name="start_time"
                     type="time"
+                    value={formData.start_time}
+                    onChange={handleInputChange}
                     required
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="end_time">End Time</Label>
-                <Input
-                  id="end_time"
-                  name="end_time"
-                  type="time"
-                  required
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  disabled={!startTime}
-                  min={startTime}
-                />
-                {endTime && startTime && (
-                  <p className="text-sm text-muted-foreground">
-                    Duration: {Math.round((new Date(`2000-01-01T${endTime}`).getTime() - new Date(`2000-01-01T${startTime}`).getTime()) / (1000 * 60))} minutes
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="venue_id">Venue (Optional)</Label>
-                <Select value={venueId} onValueChange={setVenueId}>
+                <Select value={formData.venue_id} onValueChange={handleVenueChange}>
                   <SelectTrigger id="venue_id">
                     <SelectValue placeholder="Select a venue" />
                   </SelectTrigger>
@@ -410,7 +445,8 @@ export default function EventNew() {
                   id="max_registrations"
                   name="max_registrations"
                   type="number"
-                  placeholder="100"
+                  value={formData.max_registrations}
+                  onChange={handleInputChange}
                   required
                   min="1"
                   max="1000"
@@ -458,13 +494,11 @@ export default function EventNew() {
                 </div>
               </div>
 
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <h4 className="font-medium mb-2">Post-Event Features (Coming Soon)</h4>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Custom feedback questions for attendees</li>
-                  <li>• Photo gallery for event highlights</li>
-                  <li>• Winner announcements and podium photos</li>
-                </ul>
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <p className="text-sm text-blue-900">
+                  <strong>Note:</strong> Changes to title, description, date, time, and image are editable. 
+                  Maximum registrations can be increased but not decreased below current registration count.
+                </p>
               </div>
             </CardContent>
 
@@ -473,7 +507,7 @@ export default function EventNew() {
                 type="button"
                 variant="outline"
                 className="flex-1"
-                onClick={() => navigate('/hub')}
+                onClick={() => navigate(`/hub/event/${event.id}`)}
               >
                 Cancel
               </Button>
@@ -482,7 +516,7 @@ export default function EventNew() {
                 className="flex-1"
                 disabled={isLoading || isUploadingImage}
               >
-                {isLoading ? 'Creating...' : isUploadingImage ? 'Uploading image...' : 'Create Event'}
+                {isLoading ? 'Updating...' : isUploadingImage ? 'Uploading image...' : 'Update Event'}
               </Button>
             </div>
           </form>

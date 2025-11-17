@@ -32,19 +32,21 @@ export default function VenueDetail() {
   const [venue, setVenue] = useState<Venue | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
-  const [selectedTime, setSelectedTime] = useState('');
-  const [duration, setDuration] = useState(2);
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [loading, setLoading] = useState(true);
   const [booking, setBooking] = useState(false);
 
   useEffect(() => {
     if (id) {
+      console.log('[VenueDetail] Loading venue ID:', id);
       fetchVenue();
       fetchBookings();
     }
   }, [id]);
 
   const fetchVenue = async () => {
+    console.log('[VenueDetail] Fetching venue:', id);
     const { data, error } = await supabase
       .from('venues')
       .select('*')
@@ -52,9 +54,10 @@ export default function VenueDetail() {
       .single();
 
     if (error) {
+      console.error('[VenueDetail] Fetch error:', error);
       toast.error('Failed to load venue');
-      console.error(error);
     } else {
+      console.log('[VenueDetail] Venue loaded:', data);
       setVenue(data);
     }
     setLoading(false);
@@ -75,12 +78,29 @@ export default function VenueDetail() {
   };
 
   const handleBooking = async () => {
-    if (!selectedDate || !selectedTime || !user) return;
+    if (!selectedDate || !startTime || !endTime || !user) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    // Validate that end time is after start time
+    const [startHours, startMins] = startTime.split(':').map(Number);
+    const [endHours, endMins] = endTime.split(':').map(Number);
+    const startTotalMins = startHours * 60 + startMins;
+    const endTotalMins = endHours * 60 + endMins;
+
+    if (endTotalMins <= startTotalMins) {
+      toast.error('End time must be after start time');
+      return;
+    }
 
     console.log('Booking attempt by user:', {
       userId: user.id,
       email: user.email,
-      userRole: userRole
+      userRole: userRole,
+      date: selectedDate,
+      startTime,
+      endTime
     });
 
     setBooking(true);
@@ -117,20 +137,19 @@ export default function VenueDetail() {
       toast.success('Club profile created! Proceeding with booking...');
     }
 
-    const startTime = new Date(selectedDate);
-    const [hours, minutes] = selectedTime.split(':');
-    startTime.setHours(parseInt(hours), parseInt(minutes));
+    const bookingStartTime = new Date(selectedDate);
+    bookingStartTime.setHours(startHours, startMins);
 
-    const endTime = new Date(startTime);
-    endTime.setHours(endTime.getHours() + duration);
+    const bookingEndTime = new Date(selectedDate);
+    bookingEndTime.setHours(endHours, endMins);
 
     const { error } = await supabase
       .from('venue_bookings')
       .insert({
         venue_id: id,
         club_id: club.id,
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        start_time: bookingStartTime.toISOString(),
+        end_time: bookingEndTime.toISOString(),
         status: 'pending'
       });
 
@@ -140,6 +159,8 @@ export default function VenueDetail() {
     } else {
       toast.success('Booking request submitted! You will be notified once approved.');
       fetchBookings();
+      setStartTime('');
+      setEndTime('');
     }
 
     setBooking(false);
@@ -178,7 +199,7 @@ export default function VenueDetail() {
       
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         <Button variant="ghost" asChild className="mb-6">
-          <Link to="/club/venues">
+          <Link to="/venues">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Venues
           </Link>
@@ -241,14 +262,14 @@ export default function VenueDetail() {
                 </div>
 
                 <div>
-                  <p className="font-medium mb-3">Select Time:</p>
+                  <p className="font-medium mb-3">Select Start Time:</p>
                   <div className="grid grid-cols-3 gap-2">
                     {timeSlots.map((time) => (
                       <Button
                         key={time}
-                        variant={selectedTime === time ? "default" : "outline"}
+                        variant={startTime === time ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setSelectedTime(time)}
+                        onClick={() => setStartTime(time)}
                         className="text-sm"
                       >
                         {time}
@@ -258,36 +279,38 @@ export default function VenueDetail() {
                 </div>
 
                 <div>
-                  <p className="font-medium mb-3">Duration (hours):</p>
-                  <div className="flex gap-2">
-                    {[1, 2, 3, 4, 6, 8].map((hours) => (
+                  <p className="font-medium mb-3">Select End Time:</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {timeSlots.map((time) => (
                       <Button
-                        key={hours}
-                        variant={duration === hours ? "default" : "outline"}
+                        key={time}
+                        variant={endTime === time ? "default" : "outline"}
                         size="sm"
-                        onClick={() => setDuration(hours)}
+                        onClick={() => setEndTime(time)}
+                        disabled={startTime && time <= startTime}
+                        className="text-sm"
                       >
-                        {hours}h
+                        {time}
                       </Button>
                     ))}
                   </div>
                 </div>
 
-                {selectedDate && selectedTime && (
+                {selectedDate && startTime && endTime && (
                   <div className="p-4 bg-muted rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Clock className="h-4 w-4" />
                       <span className="font-medium">Booking Summary:</span>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {selectedDate.toLocaleDateString()} at {selectedTime} for {duration} hour{duration > 1 ? 's' : ''}
+                      {selectedDate.toLocaleDateString()} from {startTime} to {endTime}
                     </p>
                   </div>
                 )}
 
                 <Button 
                   onClick={handleBooking}
-                  disabled={!selectedDate || !selectedTime || booking}
+                  disabled={!selectedDate || !startTime || !endTime || booking}
                   className="w-full"
                 >
                   {booking ? 'Submitting...' : 'Submit Booking Request'}
