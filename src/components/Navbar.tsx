@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { GraduationCap, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { CampifyLogo } from '@/components/CampifyLogo';
 
 export function Navbar() {
   const { user, signOut } = useAuth();
@@ -17,11 +18,11 @@ export function Navbar() {
   return (
     <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 font-bold text-xl">
-          <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-            <GraduationCap className="h-5 w-5 text-white" />
+        <Link to="/" className="flex items-center gap-3" key="navbar-logo-v2">
+          <div className="flex-shrink-0">
+            <CampifyLogo className="h-12 w-12" />
           </div>
-          <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <span className="font-bold text-xl bg-gradient-to-r from-[#1e4d6b] to-[#f5a623] bg-clip-text text-transparent">
             Campify
           </span>
         </Link>
@@ -38,7 +39,7 @@ export function Navbar() {
               <Button variant="ghost" asChild>
                 <Link to="/market">The Market</Link>
               </Button>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="rounded-full">
