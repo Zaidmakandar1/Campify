@@ -29,9 +29,9 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <MapPin className="h-16 w-16 text-primary" />
+    <Card className="overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
+      <div className="h-48 w-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <MapPin className="h-16 w-16 text-white" />
       </div>
       
       <CardHeader className="flex-1">
@@ -43,7 +43,7 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
       
       <CardContent className="space-y-4 flex-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Users className="h-4 w-4" />
+          <Users className="h-4 w-4 text-primary" />
           <span>Capacity: {venue.capacity} people</span>
         </div>
         
@@ -64,7 +64,7 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
       
       <div className="p-6 pt-0">
         {linkTo ? (
-          <Button asChild className="w-full">
+          <Button asChild className="w-full bg-primary hover:bg-primary/90 text-white">
             <Link to={linkTo}>
               View Details & Book
             </Link>

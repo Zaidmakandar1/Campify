@@ -28,27 +28,27 @@ export function FeedbackCard({ feedback, onUpvote, onStatusChange, showActions =
   
   const getCategoryColor = (category: string) => {
     const colors: Record<string, string> = {
-      facilities: 'bg-blue-500',
-      academics: 'bg-green-500',
-      events: 'bg-purple-500',
-      administration: 'bg-orange-500',
-      other: 'bg-gray-500',
+      facilities: 'bg-primary text-white',
+      academics: 'bg-success text-white',
+      events: 'bg-accent text-white',
+      administration: 'bg-orange-500 text-white',
+      other: 'bg-gray-500 text-white',
     };
     return colors[category] || colors.other;
   };
 
   const getStatusBadge = (status?: string) => {
     const statusConfig = {
-      pending: { label: 'Pending', className: 'bg-yellow-500' },
-      in_process: { label: 'In Process', className: 'bg-blue-500' },
-      resolved: { label: 'Resolved', className: 'bg-green-500' }
+      pending: { label: 'Pending', className: 'bg-accent text-white' },
+      in_process: { label: 'In Process', className: 'bg-primary text-white' },
+      resolved: { label: 'Resolved', className: 'bg-success text-white' }
     };
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   return (
-    <Card className="hover:shadow-md transition-shadow h-full flex flex-col">
+    <Card className="hover:shadow-lg transition-all h-full flex flex-col">
       <CardHeader className="flex-1">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-h-[120px]">
@@ -95,12 +95,12 @@ export function FeedbackCard({ feedback, onUpvote, onStatusChange, showActions =
               variant="ghost"
               size="sm"
               onClick={() => onUpvote?.(feedback.id)}
-              className="gap-1 h-8 px-2"
+              className="gap-1 h-8 px-2 hover:bg-primary/10 hover:text-primary"
             >
               <ThumbsUp className="h-3 w-3" />
               <span className="text-xs">{feedback.upvotes}</span>
             </Button>
-            <Button variant="ghost" size="sm" asChild className="gap-1 h-8 px-2">
+            <Button variant="ghost" size="sm" asChild className="gap-1 h-8 px-2 hover:bg-primary/10 hover:text-primary">
               <Link to={`/voice/${feedback.id}`}>
                 <MessageSquare className="h-3 w-3" />
                 <span className="text-xs">{feedback.feedback_comments?.[0]?.count || 0}</span>

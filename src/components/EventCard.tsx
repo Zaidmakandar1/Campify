@@ -21,18 +21,18 @@ interface EventCardProps {
 
 export function EventCard({ event, showClubName = true }: EventCardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <Calendar className="h-16 w-16 text-primary" />
+    <Card className="overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
+      <div className="h-48 w-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+        <Calendar className="h-16 w-16 text-white" />
       </div>
       
       <CardHeader className="flex-1">
         <div className="flex items-start justify-between">
           <CardTitle className="text-lg line-clamp-2">{event.title}</CardTitle>
           {event.is_completed ? (
-            <Badge className="bg-green-500 ml-2">Completed</Badge>
+            <Badge className="bg-success text-white ml-2">Completed</Badge>
           ) : (
-            <Badge className="ml-2">Upcoming</Badge>
+            <Badge className="bg-primary text-white ml-2">Upcoming</Badge>
           )}
         </div>
         {showClubName && event.clubs && (
@@ -48,24 +48,24 @@ export function EventCard({ event, showClubName = true }: EventCardProps) {
         </p>
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4" />
+            <Calendar className="h-4 w-4 text-primary" />
             {new Date(event.start_date).toLocaleDateString()}
           </div>
           {event.venues && (
             <div className="flex items-center gap-2 text-muted-foreground">
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-4 w-4 text-primary" />
               {event.venues.name}
             </div>
           )}
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-4 w-4" />
+            <Users className="h-4 w-4 text-accent" />
             {event.current_registrations} / {event.max_registrations} registered
           </div>
         </div>
       </CardContent>
       
       <CardFooter>
-        <Button asChild className="w-full">
+        <Button asChild className="w-full bg-primary hover:bg-primary/90 text-white">
           <Link to={`/hub/event/${event.id}`}>
             View Details
           </Link>

@@ -16,13 +16,13 @@ export function Navbar() {
   const navigate = useNavigate();
 
   return (
-    <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
+    <nav className="border-b navbar-blur sticky top-0 z-50 shadow-md">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3" key="navbar-logo-v2">
+        <Link to="/" className="flex items-center gap-3 hover:scale-105 transition-transform" key="navbar-logo-v3">
           <div className="flex-shrink-0">
             <CampifyLogo className="h-12 w-12" />
           </div>
-          <span className="font-bold text-xl bg-gradient-to-r from-[#1e4d6b] to-[#f5a623] bg-clip-text text-transparent">
+          <span className="font-bold text-xl text-white drop-shadow-md">
             Campify
           </span>
         </Link>
@@ -30,21 +30,21 @@ export function Navbar() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="text-white hover:bg-white/20 hover:text-white">
                 <Link to="/voice">The Voice</Link>
               </Button>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="text-white hover:bg-white/20 hover:text-white">
                 <Link to="/hub">The Hub</Link>
               </Button>
-              <Button variant="ghost" asChild>
+              <Button variant="ghost" asChild className="text-white hover:bg-white/20 hover:text-white">
                 <Link to="/market">The Market</Link>
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-full">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-gradient-primary text-white">
+                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-white/20">
+                    <Avatar className="h-8 w-8 ring-2 ring-white/50">
+                      <AvatarFallback className="bg-accent text-white font-bold">
                         {user.email?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -63,7 +63,7 @@ export function Navbar() {
               </DropdownMenu>
             </>
           ) : (
-            <Button asChild>
+            <Button asChild className="bg-white text-primary hover:bg-white/90 shadow-lg font-semibold">
               <Link to="/auth">Get Started</Link>
             </Button>
           )}

@@ -82,14 +82,14 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       
       <main className="container mx-auto px-4 py-8">
         {/* Events Slider */}
-        <Card className="mb-8 overflow-hidden">
-          <CardHeader>
-            <CardTitle className="text-2xl">Upcoming Events</CardTitle>
+        <Card className="mb-8 overflow-hidden shadow-lg">
+          <CardHeader className="bg-white border-b">
+            <CardTitle className="text-2xl text-foreground font-bold">Upcoming Events</CardTitle>
           </CardHeader>
           <CardContent className="relative">
             {upcomingEvents.length > 0 ? (
@@ -97,33 +97,33 @@ export default function Home() {
                 {/* Slider Content */}
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-full max-w-4xl">
-                    <div className="bg-gradient-to-br from-primary/10 to-accent/10 rounded-lg p-8">
+                    <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-8 text-white shadow-xl">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="text-3xl font-bold mb-2">
                             {upcomingEvents[currentSlide]?.title}
                           </h3>
-                          <p className="text-muted-foreground mb-4">
+                          <p className="text-white/90 mb-4">
                             {upcomingEvents[currentSlide]?.description}
                           </p>
                           <div className="flex flex-wrap gap-4 text-sm">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
                               <Calendar className="h-4 w-4" />
                               {new Date(upcomingEvents[currentSlide]?.start_date).toLocaleDateString()}
                             </div>
                             {upcomingEvents[currentSlide]?.venues && (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
                                 <MapPin className="h-4 w-4" />
                                 {upcomingEvents[currentSlide]?.venues.name}
                               </div>
                             )}
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full backdrop-blur">
                               <Users className="h-4 w-4" />
                               {upcomingEvents[currentSlide]?.current_registrations} / {upcomingEvents[currentSlide]?.max_registrations}
                             </div>
                           </div>
                         </div>
-                        <Button asChild>
+                        <Button asChild className="bg-white text-primary hover:bg-white/90 shadow-lg font-semibold">
                           <Link to={`/hub/event/${upcomingEvents[currentSlide]?.id}`}>
                             View Details
                           </Link>
@@ -139,7 +139,7 @@ export default function Home() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="absolute left-4 top-1/2 -translate-y-1/2"
+                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg"
                       onClick={prevSlide}
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -147,7 +147,7 @@ export default function Home() {
                     <Button
                       variant="outline"
                       size="icon"
-                      className="absolute right-4 top-1/2 -translate-y-1/2"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white shadow-lg"
                       onClick={nextSlide}
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -179,11 +179,11 @@ export default function Home() {
         {/* Two Column Layout */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Recent Wins */}
-          <Card>
-            <CardHeader>
+          <Card className="shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="bg-white border-b">
               <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-                Recent Wins
+                <CheckCircle2 className="h-5 w-5 text-success" />
+                <span className="text-foreground font-bold">Recent Wins</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -192,7 +192,7 @@ export default function Home() {
                   <Link
                     key={feedback.id}
                     to={`/voice/${feedback.id}`}
-                    className="block p-4 rounded-lg border hover:border-primary transition-colors"
+                    className="block p-4 rounded-lg border hover:border-success hover:shadow-md transition-all bg-white"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -201,7 +201,7 @@ export default function Home() {
                           Resolved {new Date(feedback.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge className="bg-green-500">Resolved</Badge>
+                      <Badge className="bg-success text-white font bold">Resolved</Badge>
                     </div>
                   </Link>
                 ))
@@ -214,11 +214,11 @@ export default function Home() {
           </Card>
 
           {/* Completed Events */}
-          <Card>
-            <CardHeader>
+          <Card className="shadow-lg hover:shadow-xl transition-all">
+            <CardHeader className="bg-white border-b">
               <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Completed Events
+                <Calendar className="h-5 w-5 text-primary" />
+                <span className="text-foreground font-bold">Completed Events</span>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -227,7 +227,7 @@ export default function Home() {
                   <Link
                     key={event.id}
                     to={`/hub/event/${event.id}`}
-                    className="block p-4 rounded-lg border hover:border-primary transition-colors"
+                    className="block p-4 rounded-lg border hover:border-primary hover:shadow-md transition-all bg-white"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -236,7 +236,7 @@ export default function Home() {
                           {new Date(event.start_date).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge>Completed</Badge>
+                      <Badge className="bg-primary text-white">Completed</Badge>
                     </div>
                   </Link>
                 ))
@@ -250,18 +250,18 @@ export default function Home() {
         </div>
 
         {/* Club Rankings Section */}
-        <Card className="mt-6">
-          <CardHeader className="flex flex-row items-center justify-between">
+        <Card className="mt-6 shadow-lg">
+          <CardHeader className="flex flex-row items-center justify-between bg-white border-b">
             <div>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-yellow-500" />
-                Club Rankings
+                <Trophy className="h-6 w-6 text-accent" />
+                <span className="text-foreground font-bold">Club Rankings</span>
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Top performing clubs based on engagement and activities
               </p>
             </div>
-            <Button asChild variant="outline">
+            <Button asChild className="bg-primary hover:bg-primary/90 text-white">
               <Link to="/market">View Full Rankings</Link>
             </Button>
           </CardHeader>
@@ -271,14 +271,14 @@ export default function Home() {
                 {clubRankings.map((club) => (
                   <div
                     key={club.id}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:border-primary transition-colors min-h-[80px]"
+                    className="flex items-center gap-4 p-4 rounded-lg border hover:border-primary hover:shadow-md transition-all min-h-[80px] bg-white"
                   >
                     {/* Rank Badge */}
                     <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold flex-shrink-0 ${
-                      club.rank === 1 ? 'bg-yellow-500 text-white' :
+                      club.rank === 1 ? 'bg-accent text-white' :
                       club.rank === 2 ? 'bg-gray-400 text-white' :
-                      club.rank === 3 ? 'bg-orange-600 text-white' :
-                      'bg-muted text-foreground'
+                      club.rank === 3 ? 'bg-orange-400 text-white' :
+                      'bg-primary text-white'
                     }`}>
                       {club.rank <= 3 ? (
                         <Trophy className="h-6 w-6" />
@@ -304,9 +304,9 @@ export default function Home() {
                     {/* Trend Indicator */}
                     <div className="flex items-center flex-shrink-0 w-8">
                       {club.score > 70 ? (
-                        <TrendingUp className="h-5 w-5 text-green-500" />
+                        <TrendingUp className="h-5 w-5 text-success" />
                       ) : club.score < 40 ? (
-                        <TrendingDown className="h-5 w-5 text-red-500" />
+                        <TrendingDown className="h-5 w-5 text-destructive" />
                       ) : (
                         <Minus className="h-5 w-5 text-gray-500" />
                       )}
