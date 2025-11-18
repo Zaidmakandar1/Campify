@@ -74,7 +74,7 @@ export default function AdminVoice() {
     const { data, error } = await query;
 
     if (error) {
-      toast.error('Failed to load feedback');
+      toast.error('Failed to load complaints');
       console.error(error);
     } else {
       setFeedbacks(data || []);
@@ -89,7 +89,7 @@ export default function AdminVoice() {
       .eq('id', feedbackId);
 
     if (error) {
-      toast.error('Failed to update feedback status');
+      toast.error('Failed to update complaint status');
       console.error(error);
     } else {
       toast.success(isResolved ? 'Marked as unresolved' : 'Marked as resolved');
@@ -276,7 +276,7 @@ ${Object.entries(topCategories)
               <SelectValue />
             </SelectTrigger>
             <SelectContent className="bg-popover">
-              <SelectItem value="all">All Feedback</SelectItem>
+              <SelectItem value="all">All Complaints</SelectItem>
               <SelectItem value="unresolved">Unresolved</SelectItem>
               <SelectItem value="resolved">Resolved</SelectItem>
               <SelectItem value="popular">Popular (5+ upvotes)</SelectItem>

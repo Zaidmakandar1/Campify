@@ -28,7 +28,7 @@ export default function VoiceNew() {
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
-      toast.error('You must be signed in to submit feedback');
+      toast.error('You must be signed in to submit a complaint');
       setIsLoading(false);
       return;
     }
@@ -43,10 +43,10 @@ export default function VoiceNew() {
       }]);
 
     if (error) {
-      toast.error('Failed to submit Complaint');
+      toast.error('Failed to submit complaint');
       console.error(error);
     } else {
-      toast.success('Feedback submitted successfully!');
+      toast.success('Complaint submitted successfully!');
       navigate('/voice');
     }
 
@@ -67,7 +67,7 @@ export default function VoiceNew() {
               <div>
                 <CardTitle className="text-2xl">Submit New Complaint</CardTitle>
                 <CardDescription>
-                  Share your thoughts anonymously. Your voice matters.
+                  Share your complaints anonymously. Your voice matters.
                 </CardDescription>
               </div>
             </div>
@@ -80,7 +80,7 @@ export default function VoiceNew() {
                 <Input
                   id="title"
                   name="title"
-                  placeholder="Brief summary of your feedback"
+                  placeholder="Brief summary of your complaint"
                   required
                   maxLength={200}
                 />
@@ -107,13 +107,13 @@ export default function VoiceNew() {
                 <Textarea
                   id="content"
                   name="content"
-                  placeholder="Describe your feedback in detail..."
+                  placeholder="Describe your complaint in detail..."
                   required
                   rows={8}
                   className="resize-none"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Your Complaint will be posted anonymously
+                  Your complaint will be posted anonymously
                 </p>
               </div>
             </CardContent>
@@ -132,7 +132,7 @@ export default function VoiceNew() {
                 className="flex-1"
                 disabled={isLoading}
               >
-                {isLoading ? 'Submitting...' : 'Submit Feedback'}
+                {isLoading ? 'Submitting...' : 'Submit Complaint'}
               </Button>
             </CardFooter>
           </form>

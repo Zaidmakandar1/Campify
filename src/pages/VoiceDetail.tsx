@@ -57,7 +57,7 @@ export default function VoiceDetail() {
       .single();
 
     if (error) {
-      toast.error('Failed to load feedback');
+      toast.error('Failed to load complaint');
       console.error(error);
     } else {
       setFeedback(data);
@@ -183,7 +183,7 @@ export default function VoiceDetail() {
         <Button variant="ghost" asChild className="mb-6">
           <Link to="/voice">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Feedback
+            Back to Complaints
           </Link>
         </Button>
 

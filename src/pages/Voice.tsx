@@ -74,7 +74,7 @@ export default function Voice() {
     const { data, error } = await query;
 
     if (error) {
-      toast.error('Failed to load feedback');
+      toast.error('Failed to load complaints');
       console.error(error);
     } else {
       const feedbacksWithUpvotes = (data || []).map(fb => ({
@@ -247,7 +247,7 @@ export default function Voice() {
           <div>
             <h1 className="text-4xl font-bold mb-2">The Voice</h1>
             <p className="text-muted-foreground">
-              Share your Complaints anonymously and make your voice heard
+              Share your complaints anonymously and make your voice heard
             </p>
           </div>
           <div className="flex gap-4">
@@ -288,7 +288,7 @@ export default function Voice() {
 
             {feedbacks.length === 0 && (
               <div className="col-span-full text-center py-12">
-                <p className="text-muted-foreground">No Complaint found. Be the first to share!</p>
+                <p className="text-muted-foreground">No complaints found. Be the first to share!</p>
               </div>
             )}
           </div>
