@@ -15,6 +15,7 @@ export default function Profile() {
   const [myFeedback, setMyFeedback] = useState<any[]>([]);
   const [myEventFeedback, setMyEventFeedback] = useState<any[]>([]);
   const [myEvents, setMyEvents] = useState<any[]>([]);
+  const [completedEvents, setCompletedEvents] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -22,6 +23,7 @@ export default function Profile() {
       fetchMyFeedback();
       fetchMyEventFeedback();
       fetchMyEvents();
+      fetchCompletedEvents();
     }
   }, [user]);
 
@@ -39,7 +41,7 @@ export default function Profile() {
     const { data } = await supabase
       .from('feedback')
       .select('*, feedback_comments(count)')
-      .eq('created_by', user?.id)
+      .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
     
     console.log('My feedback:', data);
@@ -80,14 +82,29 @@ export default function Profile() {
         setMyEvents(formattedData);
       }
     } else {
-      // For students, show events they've registered for
+      // For students, show events they've registered for (upcoming only)
       const { data } = await supabase
         .from('event_registrations')
         .select('*, events(*)')
         .eq('user_id', user?.id)
+        .eq('events.is_completed', false)
         .order('created_at', { ascending: false });
       
       setMyEvents(data || []);
+    }
+  };
+
+  const fetchCompletedEvents = async () => {
+    if (userRole === 'student') {
+      // Fetch completed events the user registered for
+      const { data } = await supabase
+        .from('event_registrations')
+        .select('*, events(*)')
+        .eq('user_id', user?.id)
+        .eq('events.is_completed', true)
+        .order('events.start_date', { ascending: false });
+      
+      setCompletedEvents(data || []);
     }
   };
 
@@ -165,16 +182,16 @@ export default function Profile() {
                   <span>{new Date(profile?.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Voice Complaints</span>
+                  <span className="text-muted-foreground">Complaints</span>
                   <span className="font-bold">{myFeedback.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Event Feedback</span>
-                  <span className="font-bold">{myEventFeedback.length}</span>
+                  <span className="text-muted-foreground">Events Registered</span>
+                  <span className="font-bold">{myEvents.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Events Attended</span>
-                  <span className="font-bold">{myEvents.length}</span>
+                  <span className="text-muted-foreground">Events Completed</span>
+                  <span className="font-bold">{completedEvents.length}</span>
                 </div>
               </div>
               <div className="pt-4 border-t">
@@ -203,14 +220,14 @@ export default function Profile() {
               <CardTitle>My Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="voice">
+              <Tabs defaultValue="complaints">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="voice">Voice Complaints</TabsTrigger>
-                  <TabsTrigger value="eventFeedback">Event Feedback</TabsTrigger>
-                  <TabsTrigger value="events">My Events</TabsTrigger>
+                  <TabsTrigger value="complaints">Complaints</TabsTrigger>
+                  <TabsTrigger value="events">Upcoming</TabsTrigger>
+                  <TabsTrigger value="completed">Completed</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="voice" className="space-y-4 mt-4">
+                <TabsContent value="complaints" className="space-y-4 mt-4">
                   {myFeedback.length > 0 ? (
                     myFeedback.map((feedback) => {
                       const commentCount = feedback.feedback_comments?.[0]?.count || 0;
@@ -255,41 +272,7 @@ export default function Profile() {
                     })
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      No voice complaints submitted yet
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="eventFeedback" className="space-y-4 mt-4">
-                  {myEventFeedback.length > 0 ? (
-                    myEventFeedback.map((feedback) => (
-                      <div
-                        key={feedback.id}
-                        className="block p-4 rounded-lg border"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{feedback.events?.title || 'Event'}</h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {feedback.feedback_text}
-                            </p>
-                          </div>
-                          <MessageSquare className="h-5 w-5 text-muted-foreground ml-4" />
-                        </div>
-                        <div className="flex items-center gap-2 mt-3">
-                          <Badge className="text-xs">Rating: {feedback.rating}/5</Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(feedback.created_at).toLocaleDateString()}
-                          </span>
-                          {feedback.is_anonymous && (
-                            <Badge variant="outline" className="text-xs">Anonymous</Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No event feedback submitted yet
+                      No complaints submitted yet
                     </div>
                   )}
                 </TabsContent>
@@ -297,35 +280,95 @@ export default function Profile() {
                 <TabsContent value="events" className="space-y-4 mt-4">
                   {myEvents.length > 0 ? (
                     myEvents.map((registration) => (
-                      <Link
+                      <div
                         key={registration.id}
-                        to={`/hub/event/${registration.events.id}`}
-                        className="block p-4 rounded-lg border hover:border-primary transition-colors"
+                        className="p-4 rounded-lg border hover:border-primary transition-colors"
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <h3 className="font-semibold">{registration.events.title}</h3>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {registration.events.description}
-                            </p>
+                        <Link to={`/hub/event/${registration.events.id}`}>
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold hover:text-primary transition-colors">
+                                {registration.events.title}
+                              </h3>
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {registration.events.description}
+                              </p>
+                            </div>
+                            <Calendar className="h-5 w-5 text-muted-foreground ml-4" />
                           </div>
-                          <Calendar className="h-5 w-5 text-muted-foreground ml-4" />
-                        </div>
+                        </Link>
                         <div className="flex items-center gap-2 mt-3">
                           <span className="text-xs text-muted-foreground">
                             {new Date(registration.events.start_date).toLocaleDateString()}
                           </span>
-                          {registration.events.is_completed ? (
-                            <Badge className="text-xs bg-green-500">Completed</Badge>
-                          ) : (
-                            <Badge className="text-xs">Upcoming</Badge>
-                          )}
+                          <Badge className="text-xs bg-primary text-white">Upcoming</Badge>
                         </div>
-                      </Link>
+                      </div>
                     ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      No events registered yet
+                      No upcoming events
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="completed" className="space-y-4 mt-4">
+                  {completedEvents.length > 0 ? (
+                    completedEvents.map((registration) => {
+                      const hasGivenFeedback = myEventFeedback.some(
+                        f => f.event_id === registration.events.id
+                      );
+                      
+                      return (
+                        <div
+                          key={registration.id}
+                          className="p-4 rounded-lg border hover:border-primary transition-colors"
+                        >
+                          <Link to={`/hub/event/${registration.events.id}`}>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h3 className="font-semibold hover:text-primary transition-colors">
+                                  {registration.events.title}
+                                </h3>
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                  {registration.events.description}
+                                </p>
+                              </div>
+                              <Calendar className="h-5 w-5 text-muted-foreground ml-4" />
+                            </div>
+                          </Link>
+                          <div className="flex items-center justify-between mt-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(registration.events.start_date).toLocaleDateString()}
+                              </span>
+                              <Badge className="text-xs bg-green-500 text-white">Completed</Badge>
+                              {hasGivenFeedback && (
+                                <Badge variant="outline" className="text-xs">
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Feedback Given
+                                </Badge>
+                              )}
+                            </div>
+                            {!hasGivenFeedback && (
+                              <Button 
+                                asChild 
+                                size="sm"
+                                className="bg-accent hover:bg-accent/90"
+                              >
+                                <Link to={`/hub/event/${registration.events.id}?feedback=true`}>
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Give Feedback
+                                </Link>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No completed events yet
                     </div>
                   )}
                 </TabsContent>

@@ -27,6 +27,11 @@ interface FeedbackCardProps {
 export function FeedbackCard({ feedback, onUpvote, onStatusChange, showActions = true }: FeedbackCardProps) {
   const { userRole } = useAuth();
   
+  // Debug log
+  if (feedback.hasUpvoted) {
+    console.log(`Feedback ${feedback.id} hasUpvoted:`, feedback.hasUpvoted);
+  }
+  
   const getCategoryColor = () => {
     // All categories use the same standard color
     return 'bg-slate-600 text-white';
@@ -99,14 +104,26 @@ export function FeedbackCard({ feedback, onUpvote, onStatusChange, showActions =
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onUpvote?.(feedback.id)}
+              onClick={() => {
+                console.log('Upvote clicked, hasUpvoted:', feedback.hasUpvoted);
+                onUpvote?.(feedback.id);
+              }}
+              style={{
+                backgroundColor: feedback.hasUpvoted ? '#dcfce7' : undefined,
+                color: feedback.hasUpvoted ? '#15803d' : undefined
+              }}
               className={`gap-1 h-8 px-2 transition-all ${
                 feedback.hasUpvoted 
-                  ? 'bg-success/10 text-success hover:bg-success/20 hover:text-success' 
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50' 
                   : 'hover:bg-primary/10 hover:text-primary'
               }`}
             >
-              <ThumbsUp className={`h-3 w-3 ${feedback.hasUpvoted ? 'fill-current' : ''}`} />
+              <ThumbsUp 
+                className="h-3 w-3" 
+                style={{
+                  fill: feedback.hasUpvoted ? '#15803d' : 'none'
+                }}
+              />
               <span className="text-xs font-semibold">{feedback.upvotes}</span>
             </Button>
             <Button variant="ghost" size="sm" asChild className="gap-1 h-8 px-2 hover:bg-primary/10 hover:text-primary">

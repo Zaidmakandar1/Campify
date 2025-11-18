@@ -36,6 +36,7 @@ export default function VoiceDetail() {
   const [newComment, setNewComment] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [hasUpvoted, setHasUpvoted] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -46,8 +47,23 @@ export default function VoiceDetail() {
       }
       fetchFeedback();
       fetchComments();
+      checkUserUpvote();
     }
   }, [id]);
+
+  const checkUserUpvote = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('feedback_upvotes')
+      .select('id')
+      .eq('feedback_id', id)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    setHasUpvoted(!!data);
+  };
 
   const fetchFeedback = async () => {
     const { data, error } = await supabase
@@ -117,29 +133,57 @@ export default function VoiceDetail() {
 
   const handleUpvote = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user || !feedback) return;
-
-    const { data: existingUpvote } = await supabase
-      .from('feedback_upvotes')
-      .select()
-      .eq('feedback_id', feedback.id)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    if (existingUpvote) {
-      await supabase.from('feedback_upvotes').delete().eq('id', existingUpvote.id);
-      toast.success('Upvote removed');
-    } else {
-      await supabase
-        .from('feedback_upvotes')
-        .insert({
-          feedback_id: feedback.id,
-          user_id: user.id
-        });
-      toast.success('Upvoted!');
+    if (!user || !feedback) {
+      toast.error('Please sign in to upvote');
+      return;
     }
 
-    fetchFeedback();
+    // Optimistic update
+    const newHasUpvoted = !hasUpvoted;
+    setHasUpvoted(newHasUpvoted);
+    setFeedback({
+      ...feedback,
+      upvotes: newHasUpvoted ? feedback.upvotes + 1 : feedback.upvotes - 1
+    });
+
+    try {
+      if (hasUpvoted) {
+        // Remove upvote
+        await supabase
+          .from('feedback_upvotes')
+          .delete()
+          .eq('feedback_id', feedback.id)
+          .eq('user_id', user.id);
+
+        // Decrease upvote count
+        await supabase.rpc('decrement_upvotes', { feedback_id: feedback.id });
+        toast.success('Upvote removed');
+      } else {
+        // Add upvote
+        const { error } = await supabase
+          .from('feedback_upvotes')
+          .insert({
+            feedback_id: feedback.id,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+
+        // Increase upvote count
+        await supabase.rpc('increment_upvotes', { feedback_id: feedback.id });
+        toast.success('Upvoted!');
+      }
+    } catch (error) {
+      console.error('Error handling upvote:', error);
+      toast.error('Failed to update upvote');
+      
+      // Revert optimistic update on error
+      setHasUpvoted(hasUpvoted);
+      setFeedback({
+        ...feedback,
+        upvotes: hasUpvoted ? feedback.upvotes + 1 : feedback.upvotes - 1
+      });
+    }
   };
 
   const getCategoryColor = (category: string) => {
@@ -204,8 +248,22 @@ export default function VoiceDetail() {
                   </span>
                 </div>
               </div>
-              <Button onClick={handleUpvote} variant="outline" className="gap-2">
-                <ThumbsUp className="h-4 w-4" />
+              <Button 
+                onClick={handleUpvote} 
+                variant="outline" 
+                className="gap-2"
+                style={{
+                  backgroundColor: hasUpvoted ? '#dcfce7' : undefined,
+                  color: hasUpvoted ? '#15803d' : undefined,
+                  borderColor: hasUpvoted ? '#15803d' : undefined
+                }}
+              >
+                <ThumbsUp 
+                  className="h-4 w-4" 
+                  style={{
+                    fill: hasUpvoted ? '#15803d' : 'none'
+                  }}
+                />
                 {feedback.upvotes}
               </Button>
             </div>

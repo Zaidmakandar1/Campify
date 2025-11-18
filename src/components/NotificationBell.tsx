@@ -125,6 +125,9 @@ export function NotificationBell() {
     if (notification.type === 'feedback_new' || notification.type === 'feedback_status') {
       return `/voice/${notification.related_id}`;
     }
+    if (notification.type === 'event') {
+      return `/hub/event/${notification.related_id}`;
+    }
     return '/';
   };
 

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { Navbar } from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +51,8 @@ interface Review {
 export default function EventDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const feedbackSectionRef = useRef<HTMLDivElement>(null);
   const [event, setEvent] = useState<Event | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -85,6 +87,15 @@ export default function EventDetail() {
       checkRegistration();
     }
   }, [id, user]);
+
+  useEffect(() => {
+    // Scroll to feedback section if feedback=true in URL
+    if (searchParams.get('feedback') === 'true' && feedbackSectionRef.current) {
+      setTimeout(() => {
+        feedbackSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 500);
+    }
+  }, [searchParams, event]);
 
   const fetchEvent = async () => {
     const { data, error } = await supabase
@@ -647,7 +658,7 @@ export default function EventDetail() {
 
             {/* Reviews Section */}
             {event.is_completed && (
-              <Card>
+              <Card ref={feedbackSectionRef}>
                 <CardHeader>
                   <CardTitle>Reviews & Ratings</CardTitle>
                   <CardDescription>
