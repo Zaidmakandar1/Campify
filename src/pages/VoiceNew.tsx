@@ -24,19 +24,29 @@ export default function VoiceNew() {
     const content = formData.get('content') as string;
     const category = formData.get('category') as 'facilities' | 'academics' | 'events' | 'administration' | 'other';
 
+    // Get current user
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      toast.error('You must be signed in to submit feedback');
+      setIsLoading(false);
+      return;
+    }
+
     const { error } = await supabase
       .from('feedback')
       .insert([{
         title,
         content,
-        category
+        category,
+        user_id: user.id  // Save the user ID so they can get notifications
       }]);
 
     if (error) {
       toast.error('Failed to submit feedback');
       console.error(error);
     } else {
-      toast.success('Feedback submitted successfully!');
+      toast.success('Feedback submitted successfully! Faculty will be notified.');
       navigate('/voice');
     }
 

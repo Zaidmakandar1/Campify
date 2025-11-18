@@ -189,7 +189,21 @@ export default function Voice() {
         .eq('id', feedbackId);
 
       if (error) {
-        // If status column doesn't exist, fall back to just updating is_resolved
+        console.error('Full error details:', {
+          message: error.message,
+          code: error.code,
+          details: error.details,
+          hint: error.hint
+        });
+
+        // Check if it's a permission/RLS error
+        if (error.code === '42501' || error.message.includes('permission') || error.message.includes('policy')) {
+          toast.error('Permission denied. Please run FIX_FEEDBACK_RLS_POLICIES.sql in Supabase.');
+          console.error('RLS Policy Error - Run FIX_FEEDBACK_RLS_POLICIES.sql');
+          return;
+        }
+
+        // If status column doesn't exist
         if (error.message.includes('status') || error.code === '42703') {
           console.warn('Status column not found, using fallback method');
           const { error: fallbackError } = await supabase
@@ -200,14 +214,14 @@ export default function Voice() {
             .eq('id', feedbackId);
 
           if (fallbackError) {
-            toast.error('Failed to update status. Please run QUICK_NOTIFICATION_SETUP.sql in Supabase.');
+            toast.error('Failed to update. Run QUICK_NOTIFICATION_SETUP.sql and FIX_FEEDBACK_RLS_POLICIES.sql');
             console.error('Fallback error:', fallbackError);
             return;
           }
           
-          toast.warning('Status updated (limited). Please run QUICK_NOTIFICATION_SETUP.sql for full functionality.');
+          toast.warning('Status updated (limited). Run QUICK_NOTIFICATION_SETUP.sql for full functionality.');
         } else {
-          toast.error('Failed to update status');
+          toast.error(`Failed to update: ${error.message}`);
           console.error('Update error:', error);
           return;
         }
