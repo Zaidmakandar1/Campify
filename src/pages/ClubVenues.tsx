@@ -68,7 +68,11 @@ export default function ClubVenues() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {venues.map((venue) => (
-              <VenueCard key={venue.id} venue={venue} />
+              <VenueCard 
+                key={venue.id} 
+                venue={venue} 
+                linkTo={`/club/venues/${venue.id}`}
+              />
             ))}
 
             {venues.length === 0 && (

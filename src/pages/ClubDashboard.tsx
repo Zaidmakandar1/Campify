@@ -44,17 +44,19 @@ export default function ClubDashboard() {
   const fetchClubData = async () => {
     setLoading(true);
     
-    // Fetch club info
-    const { data: clubData, error: clubError } = await supabase
+    // Fetch club info (take first if multiple exist)
+    const { data: clubsData, error: clubError } = await supabase
       .from('clubs')
       .select('*')
       .eq('profile_id', user?.id)
-      .single();
+      .limit(1);
+
+    const clubData = clubsData && clubsData.length > 0 ? clubsData[0] : null;
 
     if (clubError) {
       toast.error('Failed to load club data');
       console.error(clubError);
-    } else {
+    } else if (clubData) {
       setClub(clubData);
       
       // Fetch club events

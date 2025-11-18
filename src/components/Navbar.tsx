@@ -55,7 +55,14 @@ export function Navbar() {
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => signOut()}>
+                  <DropdownMenuItem onClick={async () => {
+                    console.log('[Navbar] Sign out clicked');
+                    try {
+                      await signOut();
+                    } catch (error) {
+                      console.error('[Navbar] Sign out error:', error);
+                    }
+                  }}>
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
                   </DropdownMenuItem>

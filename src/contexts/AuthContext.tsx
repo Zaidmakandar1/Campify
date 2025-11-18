@@ -191,15 +191,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      toast.error(error.message);
-      throw error;
-    }
+    try {
+      console.log('[Auth] Signing out...');
+      
+      // Try to sign out from Supabase, but don't fail if session is missing
+      const { error } = await supabase.auth.signOut();
+      
+      if (error && !error.message.includes('Auth session missing')) {
+        // Only throw if it's not a session missing error
+        console.error('[Auth] Sign out error:', error);
+        toast.error(error.message);
+        throw error;
+      }
 
-    toast.success('Signed out successfully!');
-    navigate('/auth');
+      // Always clear local state regardless of Supabase response
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      
+      // Clear any pending data
+      localStorage.removeItem('pendingClubData');
+      
+      // Clear all local storage items related to Supabase auth
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('sb-')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      console.log('[Auth] Signed out successfully');
+      toast.success('Signed out successfully!');
+      navigate('/auth');
+    } catch (error: any) {
+      console.error('[Auth] Sign out failed:', error);
+      
+      // Even if sign out fails, clear local state and redirect
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      localStorage.clear();
+      
+      toast.success('Signed out successfully!');
+      navigate('/auth');
+    }
   };
 
   return (

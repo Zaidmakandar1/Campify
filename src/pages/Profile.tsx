@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MessageSquare, Calendar, LayoutDashboard, Plus, MapPin } from 'lucide-react';
+import { User, MessageSquare, Calendar, LayoutDashboard, Plus, MapPin, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Profile() {
-  const { user, userRole } = useAuth();
+  const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [myFeedback, setMyFeedback] = useState<any[]>([]);
   const [myEvents, setMyEvents] = useState<any[]>([]);
@@ -44,13 +44,38 @@ export default function Profile() {
   };
 
   const fetchMyEvents = async () => {
-    const { data } = await supabase
-      .from('event_registrations')
-      .select('*, events(*)')
-      .eq('user_id', user?.id)
-      .order('created_at', { ascending: false });
-    
-    setMyEvents(data || []);
+    if (userRole === 'club') {
+      // For club reps, show events their club has created
+      const { data: clubsData } = await supabase
+        .from('clubs')
+        .select('id')
+        .eq('profile_id', user?.id)
+        .limit(1);
+
+      if (clubsData && clubsData.length > 0) {
+        const { data } = await supabase
+          .from('events')
+          .select('*')
+          .eq('club_id', clubsData[0].id)
+          .order('start_date', { ascending: false });
+        
+        // Format to match the registration structure
+        const formattedData = (data || []).map(event => ({
+          id: event.id,
+          events: event
+        }));
+        setMyEvents(formattedData);
+      }
+    } else {
+      // For students, show events they've registered for
+      const { data } = await supabase
+        .from('event_registrations')
+        .select('*, events(*)')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+      
+      setMyEvents(data || []);
+    }
   };
 
   return (
@@ -134,6 +159,23 @@ export default function Profile() {
                   <span className="text-muted-foreground">Events Attended</span>
                   <span className="font-bold">{myEvents.length}</span>
                 </div>
+              </div>
+              <div className="pt-4 border-t">
+                <Button 
+                  variant="destructive" 
+                  className="w-full"
+                  onClick={async () => {
+                    console.log('[Profile] Logout button clicked');
+                    try {
+                      await signOut();
+                    } catch (error) {
+                      console.error('[Profile] Logout error:', error);
+                    }
+                  }}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </div>
             </CardContent>
           </Card>
