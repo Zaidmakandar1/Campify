@@ -19,6 +19,7 @@ import EventNew from "./pages/EventNew";
 import EventEdit from "./pages/EventEdit";
 import EventRegistrations from "./pages/EventRegistrations";
 import ClubDashboard from "./pages/ClubDashboard";
+import ClubSetup from "./pages/ClubSetup";
 import ClubVenues from "./pages/ClubVenues";
 import PublicVenues from "./pages/PublicVenues";
 import VenueDetail from "./pages/VenueDetail";
@@ -125,6 +126,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <ClubDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/club/setup"
+              element={
+                <ProtectedRoute allowedRoles={['club']}>
+                  <ClubSetup />
                 </ProtectedRoute>
               }
             />
