@@ -104,14 +104,17 @@ export default function ClubDashboard() {
         <div className="container mx-auto px-4 py-8 text-center">
           <Card className="max-w-md mx-auto">
             <CardHeader>
-              <CardTitle>No Club Found</CardTitle>
+              <CardTitle>Club Profile Setup Required</CardTitle>
               <CardDescription>
-                You need to create a club profile first.
+                Complete your club profile to access the dashboard
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button asChild>
-                <Link to="/profile">Go to Profile</Link>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Your club profile wasn't created during signup. Let's set it up now!
+              </p>
+              <Button asChild className="w-full">
+                <Link to="/club/setup">Complete Club Profile</Link>
               </Button>
             </CardContent>
           </Card>
