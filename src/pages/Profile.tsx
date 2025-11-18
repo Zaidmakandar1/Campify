@@ -82,29 +82,96 @@ export default function Profile() {
         setMyEvents(formattedData);
       }
     } else {
-      // For students, show events they've registered for (upcoming only)
-      const { data } = await supabase
+      // For students, show events they've registered for
+      const { data: registrations, error } = await supabase
         .from('event_registrations')
-        .select('*, events(*)')
+        .select('*')
         .eq('user_id', user?.id)
-        .eq('events.is_completed', false)
         .order('created_at', { ascending: false });
       
-      setMyEvents(data || []);
+      console.log('Event registrations fetched:', registrations);
+      console.log('Error:', error);
+      
+      if (error) {
+        console.error('Error fetching event registrations:', error);
+        setMyEvents([]);
+        return;
+      }
+      
+      if (!registrations || registrations.length === 0) {
+        console.log('No registrations found');
+        setMyEvents([]);
+        return;
+      }
+      
+      // Fetch event details for each registration
+      const eventIds = registrations.map(r => r.event_id);
+      const { data: events } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', eventIds);
+      
+      console.log('Events fetched:', events);
+      
+      // Combine registrations with event data
+      const registrationsWithEvents = registrations.map(registration => {
+        const event = events?.find(e => e.id === registration.event_id);
+        return {
+          ...registration,
+          events: event
+        };
+      });
+      
+      // Filter for upcoming events only (not completed)
+      const upcomingEvents = registrationsWithEvents.filter(
+        registration => registration.events && !registration.events.is_completed
+      );
+      
+      console.log('Upcoming events after filter:', upcomingEvents);
+      setMyEvents(upcomingEvents);
     }
   };
 
   const fetchCompletedEvents = async () => {
     if (userRole === 'student') {
-      // Fetch completed events the user registered for
-      const { data } = await supabase
+      // Fetch all event registrations
+      const { data: registrations, error } = await supabase
         .from('event_registrations')
-        .select('*, events(*)')
+        .select('*')
         .eq('user_id', user?.id)
-        .eq('events.is_completed', true)
-        .order('events.start_date', { ascending: false });
+        .order('created_at', { ascending: false});
       
-      setCompletedEvents(data || []);
+      console.log('Completed events registrations:', registrations);
+      console.log('Completed events error:', error);
+      
+      if (error || !registrations || registrations.length === 0) {
+        setCompletedEvents([]);
+        return;
+      }
+      
+      // Fetch event details
+      const eventIds = registrations.map(r => r.event_id);
+      const { data: events } = await supabase
+        .from('events')
+        .select('*')
+        .in('id', eventIds);
+      
+      // Combine registrations with event data
+      const registrationsWithEvents = registrations.map(registration => {
+        const event = events?.find(e => e.id === registration.event_id);
+        return {
+          ...registration,
+          events: event
+        };
+      });
+      
+      // Filter for completed events only
+      const completed = registrationsWithEvents.filter(
+        registration => registration.events && registration.events.is_completed
+      );
+      
+      console.log('Completed events after filter:', completed);
+      setCompletedEvents(completed);
     }
   };
 
