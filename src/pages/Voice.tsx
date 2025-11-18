@@ -247,7 +247,7 @@ export default function Voice() {
           <div>
             <h1 className="text-4xl font-bold mb-2">The Voice</h1>
             <p className="text-muted-foreground">
-              Share your feedback anonymously and make your voice heard
+              Share your Complaints anonymously and make your voice heard
             </p>
           </div>
           <div className="flex gap-4">
@@ -265,7 +265,7 @@ export default function Voice() {
             <Button asChild>
               <Link to="/voice/new">
                 <Plus className="h-4 w-4 mr-2" />
-                New Feedback
+                New Complaint
               </Link>
             </Button>
           </div>
@@ -288,7 +288,7 @@ export default function Voice() {
 
             {feedbacks.length === 0 && (
               <div className="col-span-full text-center py-12">
-                <p className="text-muted-foreground">No feedback found. Be the first to share!</p>
+                <p className="text-muted-foreground">No Complaint found. Be the first to share!</p>
               </div>
             )}
           </div>
