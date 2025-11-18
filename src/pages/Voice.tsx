@@ -171,9 +171,13 @@ export default function Voice() {
 
   const handleStatusChange = async (feedbackId: string, status: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error('Please sign in to update status');
+      return;
+    }
 
     try {
+      // First, try to update with status column
       const { error } = await supabase
         .from('feedback')
         .update({
@@ -185,15 +189,36 @@ export default function Voice() {
         .eq('id', feedbackId);
 
       if (error) {
-        toast.error('Failed to update status');
-        console.error(error);
+        // If status column doesn't exist, fall back to just updating is_resolved
+        if (error.message.includes('status') || error.code === '42703') {
+          console.warn('Status column not found, using fallback method');
+          const { error: fallbackError } = await supabase
+            .from('feedback')
+            .update({
+              is_resolved: status === 'resolved'
+            })
+            .eq('id', feedbackId);
+
+          if (fallbackError) {
+            toast.error('Failed to update status. Please run QUICK_NOTIFICATION_SETUP.sql in Supabase.');
+            console.error('Fallback error:', fallbackError);
+            return;
+          }
+          
+          toast.warning('Status updated (limited). Please run QUICK_NOTIFICATION_SETUP.sql for full functionality.');
+        } else {
+          toast.error('Failed to update status');
+          console.error('Update error:', error);
+          return;
+        }
       } else {
         toast.success(`Status updated to ${status.replace('_', ' ')}`);
-        fetchFeedbacks();
       }
+      
+      fetchFeedbacks();
     } catch (error) {
       console.error('Error updating status:', error);
-      toast.error('Failed to update status');
+      toast.error('Failed to update status. Check console for details.');
     }
   };
 
