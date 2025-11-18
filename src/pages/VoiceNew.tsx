@@ -33,10 +33,10 @@ export default function VoiceNew() {
       }]);
 
     if (error) {
-      toast.error('Failed to submit feedback');
+      toast.error('Failed to submit Complaint');
       console.error(error);
     } else {
-      toast.success('Feedback submitted successfully!');
+      toast.success('Complaint submitted successfully!');
       navigate('/voice');
     }
 
@@ -55,7 +55,7 @@ export default function VoiceNew() {
                 <MessageSquare className="h-5 w-5 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl">Submit New Feedback</CardTitle>
+                <CardTitle className="text-2xl">Submit New Complaint</CardTitle>
                 <CardDescription>
                   Share your thoughts anonymously. Your voice matters.
                 </CardDescription>
@@ -93,7 +93,7 @@ export default function VoiceNew() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="content">Your Feedback</Label>
+                <Label htmlFor="content">Your Complaint</Label>
                 <Textarea
                   id="content"
                   name="content"
@@ -103,7 +103,7 @@ export default function VoiceNew() {
                   className="resize-none"
                 />
                 <p className="text-sm text-muted-foreground">
-                  Your feedback will be posted anonymously
+                  Your Complaint will be posted anonymously
                 </p>
               </div>
             </CardContent>

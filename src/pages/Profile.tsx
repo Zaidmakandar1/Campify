@@ -6,19 +6,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, MessageSquare, Calendar, LayoutDashboard, Plus, MapPin, LogOut } from 'lucide-react';
+import { User, MessageSquare, Calendar, LayoutDashboard, Plus, MapPin, LogOut, ThumbsUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Profile() {
   const { user, userRole, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [myFeedback, setMyFeedback] = useState<any[]>([]);
+  const [myEventFeedback, setMyEventFeedback] = useState<any[]>([]);
   const [myEvents, setMyEvents] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchProfile();
       fetchMyFeedback();
+      fetchMyEventFeedback();
       fetchMyEvents();
     }
   }, [user]);
@@ -36,11 +38,22 @@ export default function Profile() {
   const fetchMyFeedback = async () => {
     const { data } = await supabase
       .from('feedback')
-      .select('*')
+      .select('*, feedback_comments(count)')
       .eq('created_by', user?.id)
       .order('created_at', { ascending: false });
     
+    console.log('My feedback:', data);
     setMyFeedback(data || []);
+  };
+
+  const fetchMyEventFeedback = async () => {
+    const { data } = await supabase
+      .from('event_feedback')
+      .select('*, events(title)')
+      .eq('user_id', user?.id)
+      .order('created_at', { ascending: false });
+    
+    setMyEventFeedback(data || []);
   };
 
   const fetchMyEvents = async () => {
@@ -152,8 +165,12 @@ export default function Profile() {
                   <span>{new Date(profile?.created_at).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Feedback Submitted</span>
+                  <span className="text-muted-foreground">Voice Complaints</span>
                   <span className="font-bold">{myFeedback.length}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Event Feedback</span>
+                  <span className="font-bold">{myEventFeedback.length}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Events Attended</span>
@@ -186,43 +203,93 @@ export default function Profile() {
               <CardTitle>My Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="feedback">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="feedback">My Feedback</TabsTrigger>
+              <Tabs defaultValue="voice">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="voice">Voice Complaints</TabsTrigger>
+                  <TabsTrigger value="eventFeedback">Event Feedback</TabsTrigger>
                   <TabsTrigger value="events">My Events</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="feedback" className="space-y-4 mt-4">
+                <TabsContent value="voice" className="space-y-4 mt-4">
                   {myFeedback.length > 0 ? (
-                    myFeedback.map((feedback) => (
-                      <Link
+                    myFeedback.map((feedback) => {
+                      const commentCount = feedback.feedback_comments?.[0]?.count || 0;
+                      return (
+                        <Link
+                          key={feedback.id}
+                          to={`/voice/${feedback.id}`}
+                          className="block p-4 rounded-lg border hover:border-primary transition-colors"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold">{feedback.title}</h3>
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {feedback.content}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 mt-3 flex-wrap">
+                            <Badge className="text-xs">{feedback.category}</Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(feedback.created_at).toLocaleDateString()}
+                            </span>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <ThumbsUp className="h-3 w-3" />
+                              <span>{feedback.upvotes || 0}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MessageSquare className="h-3 w-3" />
+                              <span>{commentCount}</span>
+                            </div>
+                            {feedback.is_resolved && (
+                              <Badge className="text-xs bg-green-500">Resolved</Badge>
+                            )}
+                            {feedback.status && feedback.status !== 'pending' && (
+                              <Badge variant="outline" className="text-xs capitalize">
+                                {feedback.status.replace('_', ' ')}
+                              </Badge>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No voice complaints submitted yet
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="eventFeedback" className="space-y-4 mt-4">
+                  {myEventFeedback.length > 0 ? (
+                    myEventFeedback.map((feedback) => (
+                      <div
                         key={feedback.id}
-                        to={`/voice/${feedback.id}`}
-                        className="block p-4 rounded-lg border hover:border-primary transition-colors"
+                        className="block p-4 rounded-lg border"
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="font-semibold">{feedback.title}</h3>
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {feedback.content}
+                            <h3 className="font-semibold">{feedback.events?.title || 'Event'}</h3>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {feedback.feedback_text}
                             </p>
                           </div>
                           <MessageSquare className="h-5 w-5 text-muted-foreground ml-4" />
                         </div>
                         <div className="flex items-center gap-2 mt-3">
-                          <Badge className="text-xs">{feedback.category}</Badge>
+                          <Badge className="text-xs">Rating: {feedback.rating}/5</Badge>
                           <span className="text-xs text-muted-foreground">
                             {new Date(feedback.created_at).toLocaleDateString()}
                           </span>
-                          {feedback.is_resolved && (
-                            <Badge className="text-xs bg-green-500">Resolved</Badge>
+                          {feedback.is_anonymous && (
+                            <Badge variant="outline" className="text-xs">Anonymous</Badge>
                           )}
                         </div>
-                      </Link>
+                      </div>
                     ))
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      No feedback submitted yet
+                      No event feedback submitted yet
                     </div>
                   )}
                 </TabsContent>

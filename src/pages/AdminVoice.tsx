@@ -173,7 +173,7 @@ ${Object.entries(topCategories)
           <div>
             <h1 className="text-4xl font-bold mb-2">Admin Dashboard - The Voice</h1>
             <p className="text-muted-foreground">
-              Monitor and manage student feedback
+              Monitor and manage student Complaints
             </p>
           </div>
           <div className="flex gap-4">
@@ -186,9 +186,9 @@ ${Object.entries(topCategories)
               </DialogTrigger>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Feedback Summary Report</DialogTitle>
+                  <DialogTitle>Complaint Summary Report</DialogTitle>
                   <DialogDescription>
-                    AI-generated insights from student feedback
+                    AI-generated insights from student Complaints
                   </DialogDescription>
                 </DialogHeader>
                 <div className="max-h-96 overflow-y-auto">
@@ -220,7 +220,7 @@ ${Object.entries(topCategories)
                 <MessageSquare className="h-5 w-5 text-primary" />
                 <div>
                   <p className="text-2xl font-bold">{feedbacks.length}</p>
-                  <p className="text-sm text-muted-foreground">Total Feedback</p>
+                  <p className="text-sm text-muted-foreground">Total Complaints</p>
                 </div>
               </div>
             </CardContent>
@@ -339,7 +339,7 @@ ${Object.entries(topCategories)
 
             {feedbacks.length === 0 && (
               <Card className="p-12 text-center">
-                <p className="text-muted-foreground">No feedback found for the selected filter.</p>
+                <p className="text-muted-foreground">No Complaints found for the selected filter.</p>
               </Card>
             )}
           </div>

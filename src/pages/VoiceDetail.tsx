@@ -169,7 +169,7 @@ export default function VoiceDetail() {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-muted-foreground">Feedback not found</p>
+          <p className="text-muted-foreground">Complaint not found</p>
         </div>
       </div>
     );
