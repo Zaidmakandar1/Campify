@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Users, Wifi, Car, Coffee } from 'lucide-react';
+import { MapPin, Users, Wifi, Car, Coffee, Edit } from 'lucide-react';
 
 interface VenueCardProps {
   venue: {
@@ -14,9 +15,15 @@ interface VenueCardProps {
     amenities?: string[];
   };
   linkTo?: string;
+  onEdit?: (venueId: string) => void;
+  canEdit?: boolean;
 }
 
-export function VenueCard({ venue, linkTo }: VenueCardProps) {
+export function VenueCard({ venue, linkTo, onEdit, canEdit }: VenueCardProps) {
+  useEffect(() => {
+    console.log(`[VenueCard ${venue.id}] Rendered with linkTo=${linkTo}, canEdit=${canEdit}`);
+  }, [venue.id, linkTo, canEdit]);
+
   const getAmenityIcon = (amenity: string) => {
     const icons: Record<string, any> = {
       wifi: Wifi,
@@ -29,9 +36,17 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
   };
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-        <MapPin className="h-16 w-16 text-white" />
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
+        {venue.image_url ? (
+          <img
+            src={venue.image_url}
+            alt={venue.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <MapPin className="h-16 w-16 text-primary" />
+        )}
       </div>
       
       <CardHeader className="flex-1">
@@ -62,9 +77,9 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
         )}
       </CardContent>
       
-      <div className="p-6 pt-0">
+      <div className="p-6 pt-0 space-y-2">
         {linkTo ? (
-          <Button asChild className="w-full bg-primary hover:bg-primary/90 text-white">
+          <Button asChild className="w-full">
             <Link to={linkTo}>
               View Details & Book
             </Link>
@@ -72,6 +87,17 @@ export function VenueCard({ venue, linkTo }: VenueCardProps) {
         ) : (
           <Button disabled className="w-full">
             View Only (Club Access Required)
+          </Button>
+        )}
+        
+        {canEdit && (
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => onEdit?.(venue.id)}
+          >
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Venue
           </Button>
         )}
       </div>
