@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!user) {
         setUserRole(null);
       }
-    }, 5000); // 5 second emergency timeout
+    }, 2000); // 2 second emergency timeout (reduced from 5)
 
     return () => clearTimeout(emergencyTimeout);
   }, [user]);
@@ -46,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Simple session check with timeout
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((resolve) => 
-          setTimeout(() => resolve({ data: { session: null }, error: null }), 3000)
+          setTimeout(() => resolve({ data: { session: null }, error: null }), 1500)
         );
         
         const result = await Promise.race([sessionPromise, timeoutPromise]) as any;

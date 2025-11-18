@@ -34,52 +34,92 @@ export default function Home() {
   }, [upcomingEvents.length]);
 
   const fetchUpcomingEvents = async () => {
-    const { data } = await supabase
-      .from('events')
-      .select('*, venues(name), clubs(name)')
-      .eq('is_completed', false)
-      .order('start_date', { ascending: true })
-      .limit(5);
-    
-    setUpcomingEvents(data || []);
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      
+      const queryPromise = supabase
+        .from('events')
+        .select('*, venues(name), clubs(name)')
+        .eq('is_completed', false)
+        .order('start_date', { ascending: true })
+        .limit(5);
+      
+      const { data } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      setUpcomingEvents(data || []);
+    } catch (err) {
+      console.error('Failed to fetch upcoming events:', err);
+      setUpcomingEvents([]);
+    }
   };
 
   const fetchCompletedEvents = async () => {
-    const { data } = await supabase
-      .from('events')
-      .select('*, venues(name), clubs(name)')
-      .eq('is_completed', true)
-      .order('start_date', { ascending: false })
-      .limit(6);
-    
-    setCompletedEvents(data || []);
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      
+      const queryPromise = supabase
+        .from('events')
+        .select('*, venues(name), clubs(name)')
+        .eq('is_completed', true)
+        .order('start_date', { ascending: false })
+        .limit(6);
+      
+      const { data } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      setCompletedEvents(data || []);
+    } catch (err) {
+      console.error('Failed to fetch completed events:', err);
+      setCompletedEvents([]);
+    }
   };
 
   const fetchResolvedFeedback = async () => {
-    const { data } = await supabase
-      .from('feedback')
-      .select('*')
-      .eq('is_resolved', true)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    setResolvedFeedback(data || []);
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      
+      const queryPromise = supabase
+        .from('feedback')
+        .select('*')
+        .eq('is_resolved', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      const { data } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      setResolvedFeedback(data || []);
+    } catch (err) {
+      console.error('Failed to fetch resolved feedback:', err);
+      setResolvedFeedback([]);
+    }
   };
 
   const fetchClubRankings = async () => {
-    const { data: clubs } = await supabase
-      .from('clubs')
-      .select('*')
-      .order('performance_score', { ascending: false });
-    
-    if (clubs) {
-      // Calculate rankings based on performance score
-      const rankedClubs = clubs.map((club, index) => ({
-        ...club,
-        rank: index + 1,
-        score: club.performance_score || 50
-      }));
-      setClubRankings(rankedClubs);
+    try {
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('timeout')), 3000)
+      );
+      
+      const queryPromise = supabase
+        .from('clubs')
+        .select('*')
+        .order('performance_score', { ascending: false });
+      
+      const { data: clubs } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      
+      if (clubs) {
+        const rankedClubs = clubs.map((club: any, index: number) => ({
+          ...club,
+          rank: index + 1,
+          score: club.performance_score || 50
+        }));
+        setClubRankings(rankedClubs);
+      }
+    } catch (err) {
+      console.error('Failed to fetch club rankings:', err);
+      setClubRankings([]);
     }
   };
 
@@ -90,6 +130,9 @@ export default function Home() {
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + upcomingEvents.length) % upcomingEvents.length);
   };
+
+  const isLoading = upcomingEvents.length === 0 && completedEvents.length === 0 && 
+                    resolvedFeedback.length === 0 && clubRankings.length === 0;
 
   return (
     <div className="min-h-screen bg-gray-50">

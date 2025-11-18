@@ -22,16 +22,19 @@ interface EventCardProps {
 
 export function EventCard({ event, showClubName = true }: EventCardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
-      <div className="h-48 w-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden">
+    <Card className="overflow-hidden hover:shadow-lg transition-all h-full flex flex-col">
+      <div className="h-48 w-full bg-gradient-to-br from-primary to-accent flex items-center justify-center relative overflow-hidden">
         {event.image_url ? (
-          <img
-            src={event.image_url}
-            alt={event.title}
-            className="w-full h-full object-cover"
-          />
+          <>
+            <img 
+              src={event.image_url} 
+              alt={event.title}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          </>
         ) : (
-          <Calendar className="h-16 w-16 text-primary" />
+          <Calendar className="h-16 w-16 text-white relative z-10" />
         )}
       </div>
       

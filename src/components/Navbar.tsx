@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CampifyLogo } from '@/components/CampifyLogo';
+import { NotificationBell } from '@/components/NotificationBell';
 
 export function Navbar() {
   const { user, signOut } = useAuth();
@@ -39,6 +40,8 @@ export function Navbar() {
               <Button variant="ghost" asChild className="text-white hover:bg-white/20 hover:text-white">
                 <Link to="/market">The Market</Link>
               </Button>
+
+              <NotificationBell />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
