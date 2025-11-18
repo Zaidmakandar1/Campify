@@ -17,6 +17,7 @@ interface FeedbackCardProps {
     status?: string;
     created_at: string;
     feedback_comments?: { count: number }[];
+    hasUpvoted?: boolean;
   };
   onUpvote?: (feedbackId: string) => void;
   onStatusChange?: (feedbackId: string, status: string) => void;
@@ -95,10 +96,14 @@ export function FeedbackCard({ feedback, onUpvote, onStatusChange, showActions =
               variant="ghost"
               size="sm"
               onClick={() => onUpvote?.(feedback.id)}
-              className="gap-1 h-8 px-2 hover:bg-primary/10 hover:text-primary"
+              className={`gap-1 h-8 px-2 transition-all ${
+                feedback.hasUpvoted 
+                  ? 'bg-success/10 text-success hover:bg-success/20 hover:text-success' 
+                  : 'hover:bg-primary/10 hover:text-primary'
+              }`}
             >
-              <ThumbsUp className="h-3 w-3" />
-              <span className="text-xs">{feedback.upvotes}</span>
+              <ThumbsUp className={`h-3 w-3 ${feedback.hasUpvoted ? 'fill-current' : ''}`} />
+              <span className="text-xs font-semibold">{feedback.upvotes}</span>
             </Button>
             <Button variant="ghost" size="sm" asChild className="gap-1 h-8 px-2 hover:bg-primary/10 hover:text-primary">
               <Link to={`/voice/${feedback.id}`}>

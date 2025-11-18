@@ -25,16 +25,37 @@ interface Feedback {
   status?: string;
   created_at: string;
   feedback_comments: { count: number }[];
+  hasUpvoted?: boolean;
 }
 
 export default function Voice() {
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [filter, setFilter] = useState('recent');
   const [loading, setLoading] = useState(true);
+  const [userUpvotes, setUserUpvotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchFeedbacks();
+    fetchUserUpvotes();
   }, [filter]);
+
+  const fetchUserUpvotes = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { data } = await supabase
+        .from('feedback_upvotes')
+        .select('feedback_id')
+        .eq('user_id', user.id);
+
+      if (data) {
+        setUserUpvotes(new Set(data.map(upvote => upvote.feedback_id)));
+      }
+    } catch (error) {
+      console.error('Error fetching user upvotes:', error);
+    }
+  };
 
   const fetchFeedbacks = async () => {
     setLoading(true);
@@ -56,26 +77,52 @@ export default function Voice() {
       toast.error('Failed to load feedback');
       console.error(error);
     } else {
-      setFeedbacks(data || []);
+      const feedbacksWithUpvotes = (data || []).map(fb => ({
+        ...fb,
+        hasUpvoted: userUpvotes.has(fb.id)
+      }));
+      setFeedbacks(feedbacksWithUpvotes);
     }
     setLoading(false);
   };
 
   const handleUpvote = async (feedbackId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      toast.error('Please sign in to upvote');
+      return;
+    }
+
+    const hasUpvoted = userUpvotes.has(feedbackId);
+
+    // Optimistic update
+    const newUpvotes = new Set(userUpvotes);
+    if (hasUpvoted) {
+      newUpvotes.delete(feedbackId);
+    } else {
+      newUpvotes.add(feedbackId);
+    }
+    setUserUpvotes(newUpvotes);
+
+    // Update UI immediately
+    setFeedbacks(prev => prev.map(fb => 
+      fb.id === feedbackId 
+        ? { 
+            ...fb, 
+            upvotes: hasUpvoted ? fb.upvotes - 1 : fb.upvotes + 1,
+            hasUpvoted: !hasUpvoted
+          }
+        : fb
+    ));
 
     try {
-      const { data: existingUpvote } = await supabase
-        .from('feedback_upvotes')
-        .select()
-        .eq('feedback_id', feedbackId)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (existingUpvote) {
+      if (hasUpvoted) {
         // Remove upvote
-        await supabase.from('feedback_upvotes').delete().eq('id', existingUpvote.id);
+        await supabase
+          .from('feedback_upvotes')
+          .delete()
+          .eq('feedback_id', feedbackId)
+          .eq('user_id', user.id);
         
         // Decrease upvote count
         await supabase.rpc('decrement_upvotes', { feedback_id: feedbackId });
@@ -90,25 +137,35 @@ export default function Voice() {
             user_id: user.id
           });
         
-        if (!error) {
-          // Increase upvote count
-          await supabase.rpc('increment_upvotes', { feedback_id: feedbackId });
-          toast.success('Upvoted!');
-        }
+        if (error) throw error;
+
+        // Increase upvote count
+        await supabase.rpc('increment_upvotes', { feedback_id: feedbackId });
+        toast.success('Upvoted!');
       }
 
       // Track activity
       await aiAnalytics.trackActivity({
         user_id: user.id,
-        activity_type: existingUpvote ? 'upvote_remove' : 'upvote_add',
+        activity_type: hasUpvoted ? 'upvote_remove' : 'upvote_add',
         target_type: 'feedback',
         target_id: feedbackId
       });
-
-      fetchFeedbacks();
     } catch (error) {
       console.error('Error handling upvote:', error);
       toast.error('Failed to update upvote');
+      
+      // Revert optimistic update on error
+      setUserUpvotes(userUpvotes);
+      setFeedbacks(prev => prev.map(fb => 
+        fb.id === feedbackId 
+          ? { 
+              ...fb, 
+              upvotes: hasUpvoted ? fb.upvotes + 1 : fb.upvotes - 1,
+              hasUpvoted: hasUpvoted
+            }
+          : fb
+      ));
     }
   };
 

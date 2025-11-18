@@ -34,27 +34,41 @@ export default function Hub() {
 
   const fetchEvents = async () => {
     setLoading(true);
-    let query = supabase
-      .from('events')
-      .select('*, venues(name), clubs(name)');
+    
+    try {
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 5000)
+      );
+      
+      let query = supabase
+        .from('events')
+        .select('*, venues(name), clubs(name)');
 
-    if (filter === 'completed') {
-      query = query.eq('is_completed', true);
-    } else {
-      query = query.eq('is_completed', false);
+      if (filter === 'completed') {
+        query = query.eq('is_completed', true);
+      } else {
+        query = query.eq('is_completed', false);
+      }
+
+      query = query.order('start_date', { ascending: false });
+
+      const { data, error } = await Promise.race([query, timeoutPromise]) as any;
+
+      if (error) {
+        console.error('Events fetch error:', error);
+        toast.error('Failed to load events. Please check your connection.');
+        setEvents([]);
+      } else {
+        setEvents(data || []);
+      }
+    } catch (err) {
+      console.error('Events fetch timeout:', err);
+      toast.error('Connection timeout. Please check if Supabase is running.');
+      setEvents([]);
+    } finally {
+      setLoading(false);
     }
-
-    query = query.order('start_date', { ascending: false });
-
-    const { data, error } = await query;
-
-    if (error) {
-      toast.error('Failed to load events');
-      console.error(error);
-    } else {
-      setEvents(data || []);
-    }
-    setLoading(false);
   };
 
   return (
