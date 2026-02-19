@@ -4,16 +4,17 @@ import { Navbar } from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, MapPin, Users, ChevronLeft, ChevronRight, CheckCircle2, Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Calendar, MapPin, Users, ChevronLeft, ChevronRight, CheckCircle2, Trophy, TrendingUp, TrendingDown, Minus, Award, Brain } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { aiAnalytics, ClubRanking } from '@/lib/aiAnalytics';
 
 export default function Home() {
   const { userRole } = useAuth();
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [completedEvents, setCompletedEvents] = useState<any[]>([]);
   const [resolvedFeedback, setResolvedFeedback] = useState<any[]>([]);
-  const [clubRankings, setClubRankings] = useState<any[]>([]);
+  const [clubRankings, setClubRankings] = useState<ClubRanking[]>([]);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
@@ -102,21 +103,10 @@ export default function Home() {
         setTimeout(() => reject(new Error('timeout')), 3000)
       );
       
-      const queryPromise = supabase
-        .from('clubs')
-        .select('*')
-        .order('performance_score', { ascending: false });
+      const rankingsPromise = aiAnalytics.calculateClubRankings();
       
-      const { data: clubs } = await Promise.race([queryPromise, timeoutPromise]) as any;
-      
-      if (clubs) {
-        const rankedClubs = clubs.map((club: any, index: number) => ({
-          ...club,
-          rank: index + 1,
-          score: club.performance_score || 50
-        }));
-        setClubRankings(rankedClubs);
-      }
+      const rankings = await Promise.race([rankingsPromise, timeoutPromise]) as ClubRanking[];
+      setClubRankings(rankings.slice(0, 5)); // Show top 5
     } catch (err) {
       console.error('Failed to fetch club rankings:', err);
       setClubRankings([]);
@@ -317,11 +307,11 @@ export default function Home() {
           <CardHeader className="flex flex-row items-center justify-between bg-white border-b">
             <div>
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-accent" />
-                <span className="text-foreground font-bold">Club Rankings</span>
+                <Brain className="h-6 w-6 text-primary" />
+                <span className="text-foreground font-bold">AI-Powered Club Rankings</span>
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Top performing clubs based on engagement and activities
+                Top performing clubs based on AI engagement analysis
               </p>
             </div>
             <Button asChild className="bg-primary hover:bg-primary/90 text-white">
@@ -334,17 +324,17 @@ export default function Home() {
                 {clubRankings.map((club) => (
                   <div
                     key={club.id}
-                    className="flex items-center gap-4 p-4 rounded-lg border hover:border-primary hover:shadow-md transition-all min-h-[80px] bg-white"
+                    className="flex items-center gap-4 p-4 rounded-lg border hover:border-primary hover:shadow-md transition-all min-h-[100px] bg-white"
                   >
                     {/* Rank Badge */}
                     <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold flex-shrink-0 ${
-                      club.rank === 1 ? 'bg-accent text-white' :
+                      club.rank === 1 ? 'bg-yellow-500 text-white' :
                       club.rank === 2 ? 'bg-gray-400 text-white' :
-                      club.rank === 3 ? 'bg-orange-400 text-white' :
+                      club.rank === 3 ? 'bg-orange-600 text-white' :
                       'bg-primary text-white'
                     }`}>
                       {club.rank <= 3 ? (
-                        <Trophy className="h-6 w-6" />
+                        <Award className="h-6 w-6" />
                       ) : (
                         `#${club.rank}`
                       )}
@@ -356,19 +346,29 @@ export default function Home() {
                       <p className="text-sm text-muted-foreground line-clamp-1">
                         {club.description || 'Student club'}
                       </p>
+                      {/* AI Insights */}
+                      {club.insights.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {club.insights.slice(0, 2).map((insight, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {insight}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
-                    {/* Score */}
-                    <div className="text-right flex-shrink-0 w-20">
-                      <div className="text-2xl font-bold text-primary">{club.score}</div>
-                      <p className="text-xs text-muted-foreground">Score</p>
+                    {/* AI Score */}
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-2xl font-bold text-primary">{club.engagement_score}</div>
+                      <p className="text-xs text-muted-foreground">AI Score</p>
                     </div>
 
                     {/* Trend Indicator */}
                     <div className="flex items-center flex-shrink-0 w-8">
-                      {club.score > 70 ? (
+                      {club.trend === 'up' ? (
                         <TrendingUp className="h-5 w-5 text-success" />
-                      ) : club.score < 40 ? (
+                      ) : club.trend === 'down' ? (
                         <TrendingDown className="h-5 w-5 text-destructive" />
                       ) : (
                         <Minus className="h-5 w-5 text-gray-500" />
@@ -379,8 +379,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
-                <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No club rankings available yet</p>
+                <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>AI is analyzing club data...</p>
               </div>
             )}
           </CardContent>

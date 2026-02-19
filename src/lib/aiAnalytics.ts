@@ -29,6 +29,10 @@ export interface ActivityData {
 }
 
 class AIAnalyticsService {
+  private rankingsCache: { data: ClubRanking[]; timestamp: number } | null = null;
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  private readonly MAX_CONCURRENT_AI = 3; // Limit concurrent Ollama requests
+
   // Track user activity
   async trackActivity(activity: ActivityData) {
     try {
@@ -53,87 +57,62 @@ class AIAnalyticsService {
   // Calculate real-time club rankings using Ollama AI
   async calculateClubRankings(): Promise<ClubRanking[]> {
     try {
+      // Check cache first
+      if (this.rankingsCache && Date.now() - this.rankingsCache.timestamp < this.CACHE_TTL) {
+        console.log('📦 Using cached club rankings...');
+        return this.rankingsCache.data;
+      }
+
       console.log('🤖 Starting AI-powered club ranking analysis...');
       
       // Check if Ollama is available
       const ollamaAvailable = await ollamaService.isAvailable();
       console.log('Ollama available:', ollamaAvailable);
 
-      // Get all clubs with their basic data
+      // Get clubs (limit to avoid huge datasets)
       const { data: clubs, error: clubsError } = await supabase
         .from('clubs')
-        .select('*');
+        .select('id,name,description,performance_score')
+        .limit(50);
 
       if (clubsError) throw clubsError;
+      if (!clubs || clubs.length === 0) return [];
 
-      // Get events data for each club
+      // Get recent events (90 days) - optimized query
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
       const { data: events, error: eventsError } = await supabase
         .from('events')
-        .select('*');
+        .select('id,club_id,created_at,current_registrations,max_registrations')
+        .gte('created_at', ninetyDaysAgo);
 
       if (eventsError) throw eventsError;
 
-      // Get feedback mentions
+      // Create lookup map for events by club_id (O(1) lookup instead of O(n) filter)
+      const eventsByClub = new Map<string, any[]>();
+      (events || []).forEach(event => {
+        if (!eventsByClub.has(event.club_id)) {
+          eventsByClub.set(event.club_id, []);
+        }
+        eventsByClub.get(event.club_id)!.push(event);
+      });
+
+      // Get feedback mentions (limit to recent feedback)
       const { data: feedback, error: feedbackError } = await supabase
         .from('feedback')
-        .select('*');
+        .select('id,content')
+        .limit(500);
 
       if (feedbackError) throw feedbackError;
 
-      // Calculate rankings for each club using AI
-      const rankings: ClubRanking[] = await Promise.all(
-        (clubs || []).map(async (club) => {
-          const clubEvents = events?.filter(e => e.club_id === club.id) || [];
-          const recentEvents = clubEvents.filter(e => 
-            new Date(e.created_at) > new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-          );
-
-          // Calculate engagement metrics
-          const eventCount = recentEvents.length;
-          const avgAttendance = recentEvents.length > 0 
-            ? recentEvents.reduce((sum, e) => sum + (e.current_registrations / Math.max(e.max_registrations, 1)), 0) / recentEvents.length
-            : 0;
-
-          // Check feedback mentions
-          const mentions = feedback?.filter(f => 
-            f.content.toLowerCase().includes(club.name.toLowerCase())
-          ).length || 0;
-
-          let aiAnalysis;
-          
-          if (ollamaAvailable) {
-            try {
-              // Use Ollama for AI-powered analysis
-              console.log(`🧠 Analyzing ${club.name} with AI...`);
-              aiAnalysis = await ollamaService.analyzeClubData({
-                name: club.name,
-                description: club.description,
-                eventCount,
-                avgAttendance,
-                mentions,
-                performance_score: club.performance_score || 0
-              });
-            } catch (aiError) {
-              console.warn(`AI analysis failed for ${club.name}, using fallback:`, aiError);
-              aiAnalysis = this.fallbackClubAnalysis(club, { eventCount, avgAttendance, mentions });
-            }
-          } else {
-            // Fallback to rule-based analysis
-            aiAnalysis = this.fallbackClubAnalysis(club, { eventCount, avgAttendance, mentions });
-          }
-
-          return {
-            id: club.id,
-            name: club.name,
-            description: club.description || '',
-            performance_score: club.performance_score || 0,
-            engagement_score: aiAnalysis.score,
-            trend: aiAnalysis.trend,
-            rank: 0, // Will be set after sorting
-            insights: [...aiAnalysis.insights, ...aiAnalysis.recommendations]
-          };
-        })
-      );
+      // Process clubs with concurrency limiting
+      const rankings: ClubRanking[] = [];
+      for (let i = 0; i < clubs.length; i += this.MAX_CONCURRENT_AI) {
+        const batch = clubs.slice(i, i + this.MAX_CONCURRENT_AI);
+        const batchResults = await Promise.all(
+          batch.map(club => this.analyzeClub(club, eventsByClub, feedback, ollamaAvailable))
+        );
+        rankings.push(...batchResults);
+      }
 
       // Sort by engagement score and assign ranks
       rankings.sort((a, b) => b.engagement_score - a.engagement_score);
@@ -141,16 +120,74 @@ class AIAnalyticsService {
         club.rank = index + 1;
       });
 
-      console.log('🏆 Club rankings calculated:', rankings.map(r => `${r.rank}. ${r.name} (${r.engagement_score})`));
+      console.log('🏆 Club rankings calculated:', rankings.slice(0, 5).map(r => `${r.rank}. ${r.name} (${r.engagement_score})`));
 
-      // Skip storing insights to avoid database errors
-      // await this.storeClubRankings(rankings);
+      // Cache the results
+      this.rankingsCache = { data: rankings, timestamp: Date.now() };
 
       return rankings;
     } catch (error) {
       console.error('Error calculating club rankings:', error);
       return [];
     }
+  }
+
+  // Analyze a single club with timeout
+  private async analyzeClub(
+    club: any,
+    eventsByClub: Map<string, any[]>,
+    feedback: any[],
+    ollamaAvailable: boolean
+  ): Promise<ClubRanking> {
+    const recentEvents = eventsByClub.get(club.id) || [];
+    
+    // Calculate engagement metrics
+    const eventCount = recentEvents.length;
+    const avgAttendance = recentEvents.length > 0 
+      ? recentEvents.reduce((sum, e) => sum + (e.current_registrations / Math.max(e.max_registrations, 1)), 0) / recentEvents.length
+      : 0;
+
+    // Count feedback mentions (efficient search)
+    const mentions = feedback?.filter(f => 
+      f.content?.toLowerCase().includes(club.name.toLowerCase())
+    ).length || 0;
+
+    let aiAnalysis;
+    
+    if (ollamaAvailable) {
+      try {
+        // Use Ollama for AI-powered analysis with timeout
+        aiAnalysis = await Promise.race([
+          ollamaService.analyzeClubData({
+            name: club.name,
+            description: club.description,
+            eventCount,
+            avgAttendance,
+            mentions,
+            performance_score: club.performance_score || 0
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Ollama timeout')), 5000) // 5 second timeout
+          )
+        ]);
+      } catch (aiError) {
+        console.warn(`AI analysis timeout/failed for ${club.name}, using fallback`);
+        aiAnalysis = this.fallbackClubAnalysis(club, { eventCount, avgAttendance, mentions });
+      }
+    } else {
+      aiAnalysis = this.fallbackClubAnalysis(club, { eventCount, avgAttendance, mentions });
+    }
+
+    return {
+      id: club.id,
+      name: club.name,
+      description: club.description || '',
+      performance_score: club.performance_score || 0,
+      engagement_score: aiAnalysis.score,
+      trend: aiAnalysis.trend,
+      rank: 0,
+      insights: [...aiAnalysis.insights, ...aiAnalysis.recommendations]
+    };
   }
 
   // Fallback analysis when AI is not available
