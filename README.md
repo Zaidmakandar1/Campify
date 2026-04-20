@@ -10,8 +10,7 @@ I'm building Campify to improve campus collaboration, communication, and student
 ### Connect with me
 
 - GitHub: `https://github.com/Zaidmakandar1`
-- LinkedIn: `<add-your-linkedin-profile>`
-- Email: `<add-your-email>`
+- Open an issue in this repository for collaboration or project-related questions
 
 ### My focus areas
 
