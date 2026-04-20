@@ -9,7 +9,7 @@ I'm building Campify to improve campus collaboration, communication, and student
 
 ### Connect with me
 
-- GitHub: `https://github.com/Zaidmakandar1`
+- GitHub: [Zaidmakandar1](https://github.com/Zaidmakandar1)
 - Open an issue in this repository for collaboration or project-related questions
 
 ### My focus areas
