@@ -2,6 +2,31 @@
 
 A comprehensive campus management platform built with React, TypeScript, and Supabase. Campify streamlines campus life by connecting students, faculty, and clubs through event management, venue booking, feedback systems, and marketplace features.
 
+## 👋 About the Maintainer
+
+Hi, I'm **Zaid Makandar** (update this name if needed).  
+I'm building Campify to improve campus collaboration, communication, and student engagement through one unified platform.
+
+### Connect with me
+
+- GitHub: `https://github.com/Zaidmakandar1`
+- LinkedIn: `<add-your-linkedin-profile>`
+- Email: `<add-your-email>`
+
+### My focus areas
+
+- Full-stack web development
+- Campus/community products
+- AI-powered insights for better decisions
+
+## 🌟 Why this repository
+
+This repository showcases:
+- Real-world product architecture with role-based access
+- End-to-end feature development (UI + backend + database)
+- Practical use of Supabase auth, RLS, and storage
+- A scalable React + TypeScript frontend foundation
+
 ## Features
 
 ### 🎯 Core Modules
