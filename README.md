@@ -4,7 +4,7 @@ A comprehensive campus management platform built with React, TypeScript, and Sup
 
 ## 👋 About the Maintainer
 
-Hi, I'm **Zaid Makandar** (update this name if needed).  
+Hi, I'm **Zaid Makandar**.  
 I'm building Campify to improve campus collaboration, communication, and student engagement through one unified platform.
 
 ### Connect with me
